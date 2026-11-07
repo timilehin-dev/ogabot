@@ -151,6 +151,25 @@ fun ChatScreen(vm: OgabotViewModel) {
                 }
             }
 
+            vm.pendingApproval?.let { pa ->
+                ApprovalCard(
+                    tool = pa.tool,
+                    argsJson = pa.argsJson,
+                    background = pa.background,
+                    onAllowOnce = { vm.approvePending(false) },
+                    onAlwaysAllow = { vm.approvePending(true) },
+                    onDeny = { vm.denyPending() }
+                )
+            }
+            vm.proposedBot?.let { proposal ->
+                ProposalCard(
+                    name = proposal.name,
+                    persona = proposal.persona,
+                    color = proposal.color,
+                    onApprove = { vm.commitProposal(null); vm.clearProposal() },
+                    onDismiss = { vm.clearProposal() }
+                )
+            }
             vm.error?.let { err ->
                 ErrorBanner(
                     err,
@@ -344,6 +363,86 @@ fun InputBar(
                         else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                     )
                 }
+            }
+        }
+    }
+}
+
+
+@Composable
+fun ApprovalCard(
+    tool: String,
+    argsJson: String,
+    background: Boolean,
+    onAllowOnce: () -> Unit,
+    onAlwaysAllow: () -> Unit,
+    onDeny: () -> Unit
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(18.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp)
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Approve " + tool + "?", style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface)
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                argsJson.take(220),
+                style = MaterialTheme.typography.bodySmall,
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (background) {
+                Text(
+                    "Requested by a background task — expires in 30 min if unanswered.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onAllowOnce, shape = RoundedCornerShape(20.dp)) { Text("Allow once") }
+                Button(onClick = onAlwaysAllow, shape = RoundedCornerShape(20.dp)) { Text("Always allow") }
+                TextButton(onClick = onDeny) { Text("Deny", color = MaterialTheme.colorScheme.error) }
+            }
+        }
+    }
+}
+
+@Composable
+fun ProposalCard(
+    name: String,
+    persona: String,
+    color: Int,
+    onApprove: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(18.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp)
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier.size(38.dp).background(avatarBrushFor(color), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(name.take(1).uppercase(), color = Color.White, fontWeight = FontWeight.Bold)
+                }
+                Spacer(Modifier.width(10.dp))
+                Text("Create bot \u201C" + name + "\u201D?", style = MaterialTheme.typography.titleMedium)
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(persona, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 4)
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onApprove, shape = RoundedCornerShape(20.dp)) { Text("Create bot") }
+                TextButton(onClick = onDismiss) { Text("Not now") }
             }
         }
     }
