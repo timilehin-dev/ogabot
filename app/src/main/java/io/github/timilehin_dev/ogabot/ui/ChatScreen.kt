@@ -104,7 +104,7 @@ fun ChatScreen(vm: OgabotViewModel) {
                 actions = {
                     IconButton(onClick = { vm.openMemory() }) {
                         Icon(
-                            Icons.Filled.List,
+                            androidx.compose.material.icons.Icons.Filled.List,
                             contentDescription = "Memory",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
