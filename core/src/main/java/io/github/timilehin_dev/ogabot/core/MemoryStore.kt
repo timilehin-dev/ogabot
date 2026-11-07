@@ -28,6 +28,16 @@ class MemoryStore(context: Context) {
         factsFile(botId).apply { parentFile?.mkdirs() }.appendText(fact.trim() + "\n")
     }
 
+    fun removeFact(botId: String, match: String): Boolean {
+        val f = factsFile(botId)
+        if (!f.exists()) return false
+        val lines = f.readLines().toMutableList()
+        val it2 = lines.firstOrNull { it.contains(match.trim(), ignoreCase = true) } ?: return false
+        lines.remove(it2)
+        f.writeText(lines.filter { it.isNotBlank() }.joinToString("\n") + (if (lines.isEmpty()) "" else "\n"))
+        return true
+    }
+
     /** Memory injected into the system prompt every turn. */
     fun promptInjection(botId: String): String {
         val profile = loadProfile(botId)
