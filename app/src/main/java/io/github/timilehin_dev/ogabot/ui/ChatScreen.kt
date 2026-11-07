@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,11 +55,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.timilehin_dev.ogabot.ChatViewModel
+import io.github.timilehin_dev.ogabot.OgabotViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatScreen(vm: ChatViewModel, onOpenSettings: () -> Unit) {
+fun ChatScreen(vm: OgabotViewModel) {
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
 
@@ -80,27 +81,32 @@ fun ChatScreen(vm: ChatViewModel, onOpenSettings: () -> Unit) {
                         Modifier
                             .padding(start = 12.dp)
                             .size(36.dp)
-                            .background(AvatarBrush, CircleShape),
+                            .background(avatarBrushFor(vm.currentBot?.colorIndex ?: 0), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("O", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text(
+                            (vm.currentBot?.name?.take(1) ?: "O").uppercase(),
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp
+                        )
                     }
                 },
                 title = {
                     Column {
-                        Text(vm.persona.name, style = MaterialTheme.typography.titleLarge)
+                        Text(vm.currentBot?.name ?: "Bot", style = MaterialTheme.typography.titleLarge)
                         Text(
-                            "chief of staff \u00b7 always on",
+                            "always on \u00b7 on-device",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 },
                 actions = {
-                    IconButton(onClick = onOpenSettings) {
+                    IconButton(onClick = { vm.openMemory() }) {
                         Icon(
-                            Icons.Filled.Settings,
-                            contentDescription = "Settings",
+                            Icons.Filled.Description,
+                            contentDescription = "Memory",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -120,7 +126,7 @@ fun ChatScreen(vm: ChatViewModel, onOpenSettings: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 if (vm.messages.isEmpty() && !vm.isStreaming) {
-                    item { EmptyState(vm, onSuggestion = { vm.send(it) }) }
+                    item { EmptyState(vm.currentBot?.name ?: "Bot") { vm.send(it) } }
                 }
                 items(vm.messages) { m ->
                     if (m.role == "user") UserBubble(m.content) else AssistantBubble(m.content)
@@ -226,19 +232,19 @@ fun TypingDots() {
 }
 
 @Composable
-fun EmptyState(vm: ChatViewModel, onSuggestion: (String) -> Unit) {
+fun EmptyState(botName: String, onSuggestion: (String) -> Unit) {
     Column(
         Modifier.fillMaxWidth().padding(top = 48.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
-            Modifier.size(64.dp).background(AvatarBrush, CircleShape),
+            Modifier.size(64.dp).background(avatarBrushFor(vm.currentBot?.colorIndex ?: 0), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Text("O", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 26.sp)
         }
         Spacer(Modifier.height(14.dp))
-        Text(vm.persona.name + " is ready", style = MaterialTheme.typography.titleLarge)
+        Text(botName + " is ready", style = MaterialTheme.typography.titleLarge)
         Text(
             "Ask anything \u2014 replies stream live.",
             style = MaterialTheme.typography.bodyMedium,
@@ -287,7 +293,7 @@ fun InputBar(value: String, onValueChange: (String) -> Unit, enabled: Boolean, o
                 onValueChange = onValueChange,
                 modifier = Modifier.weight(1f),
                 placeholder = {
-                    Text("Message Oga\u2026", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Message " + (vm.currentBot?.name ?: "") + "\u2026", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 },
                 shape = RoundedCornerShape(26.dp),
                 maxLines = 4,
