@@ -13,7 +13,8 @@ data class BotPersona(
     val colorIndex: Int = 0,
     val emoji: String = "",
     val systemPrompt: String,
-    val createdAt: Long = 0L
+    val createdAt: Long = 0L,
+    val toolGrants: Map<String, String> = emptyMap()
 )
 
 /** File-backed bot registry: bots/<id>/bot.json (the multi-agent layer, Ogabot's core). */
