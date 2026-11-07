@@ -1,6 +1,7 @@
 package io.github.timilehin_dev.ogabot.core
 
 import android.content.Context
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
