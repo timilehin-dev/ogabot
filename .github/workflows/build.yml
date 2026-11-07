@@ -27,6 +27,19 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Restore signing keystore
+        env:
+          OGABOT_KEYSTORE_BASE64: ${{ secrets.OGABOT_KEYSTORE_BASE64 }}
+          OGABOT_KEYSTORE_PASSWORD: ${{ secrets.OGABOT_KEYSTORE_PASSWORD }}
+          OGABOT_KEY_ALIAS: ${{ secrets.OGABOT_KEY_ALIAS }}
+        run: |
+          if [ -n "$OGABOT_KEYSTORE_BASE64" ]; then
+            echo "$OGABOT_KEYSTORE_BASE64" | base64 -d > "$HOME/ogabot.keystore"
+            echo "OGABOT_KEYSTORE_PATH=$HOME/ogabot.keystore" >> "$GITHUB_ENV"
+          else
+            echo "No keystore secret set; falling back to ephemeral debug signing"
+          fi
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
