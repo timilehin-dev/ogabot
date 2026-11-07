@@ -104,7 +104,7 @@ fun HomeScreen(vm: OgabotViewModel) {
                 }
             }
             LazyColumn(
-                Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                Modifier.fillMaxSize().padding(horizontal = 16.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 110.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(vm.bots) { bot -> BotRow(bot) { vm.openBot(bot.id) } }
