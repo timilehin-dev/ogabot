@@ -6,8 +6,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -22,6 +22,7 @@ import io.github.timilehin_dev.ogabot.core.OpenAiClient
 import io.github.timilehin_dev.ogabot.core.ProviderConfig
 import io.github.timilehin_dev.ogabot.core.StreamEvent
 import io.github.timilehin_dev.ogabot.core.VaultStore
+import io.github.timilehin_dev.ogabot.ui.BotSettingsScreen
 import io.github.timilehin_dev.ogabot.ui.ChatScreen
 import io.github.timilehin_dev.ogabot.ui.HomeScreen
 import io.github.timilehin_dev.ogabot.ui.MemoryScreen
@@ -30,7 +31,7 @@ import io.github.timilehin_dev.ogabot.ui.SetupScreen
 import io.github.timilehin_dev.ogabot.ui.WizardScreen
 import kotlinx.coroutines.launch
 
-enum class Screen { HOME, CHAT, WIZARD, MEMORY }
+enum class Screen { HOME, CHAT, WIZARD, MEMORY, BOT_SETTINGS, SETUP }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,12 +39,19 @@ class MainActivity : ComponentActivity() {
         setContent {
             OgabotTheme {
                 val vm: OgabotViewModel = viewModel()
-                BackHandler(enabled = vm.screen != Screen.HOME) { vm.goBack() }
-                when (vm.screen) {
-                    Screen.HOME -> HomeScreen(vm)
-                    Screen.CHAT -> ChatScreen(vm)
-                    Screen.WIZARD -> WizardScreen(vm)
-                    Screen.MEMORY -> MemoryScreen(vm)
+                if (vm.provider == null) {
+                    // first-run onboarding: no way past it until a provider is connected
+                    SetupScreen(vm = vm, isOnboarding = true, onClose = {})
+                } else {
+                    BackHandler(enabled = vm.canGoBack) { vm.back() }
+                    when (vm.screen) {
+                        Screen.HOME -> HomeScreen(vm)
+                        Screen.CHAT -> ChatScreen(vm)
+                        Screen.WIZARD -> WizardScreen(vm)
+                        Screen.MEMORY -> MemoryScreen(vm)
+                        Screen.BOT_SETTINGS -> BotSettingsScreen(vm)
+                        Screen.SETUP -> SetupScreen(vm, isOnboarding = false, onClose = { vm.back() })
+                    }
                 }
             }
         }
@@ -58,20 +66,27 @@ class OgabotViewModel(app: Application) : AndroidViewModel(app) {
     // --- global ---
     var provider by mutableStateOf<ProviderConfig?>(VaultStore.loadProvider(app))
         private set
-    var showSetup by mutableStateOf(false)
-        private set
 
-    // --- navigation ---
-    var screen by mutableStateOf(Screen.HOME)
+    // --- navigation stack ---
+    private val stack = mutableStateListOf(Screen.HOME)
+    val screen: Screen get() = stack.last()
+    val canGoBack: Boolean get() = stack.size > 1
+
+    fun push(s: Screen) { stack.add(s) }
+    fun back() { if (stack.size > 1) stack.removeAt(stack.lastIndex) }
+    fun goHome() {
+        stack.clear(); stack.add(Screen.HOME)
+        currentBot = null; messages = emptyList()
+        streamingText = ""; isStreaming = false; error = null
+    }
+
+    // --- data ---
+    var bots by mutableStateOf(BotSeed.ensure(app).let { BotRegistry.list(app) })
         private set
     var currentBot by mutableStateOf<BotPersona?>(null)
         private set
 
-    // --- home state ---
-    var bots by mutableStateOf(BotSeed.ensure(app).let { BotRegistry.list(app) })
-        private set
-
-    // --- chat state (per currentBot) ---
+    // --- chat state ---
     var messages by mutableStateOf<List<ChatMessage>>(emptyList())
         private set
     var streamingText by mutableStateOf("")
@@ -86,41 +101,52 @@ class OgabotViewModel(app: Application) : AndroidViewModel(app) {
     var memoryDraft by mutableStateOf("")
         private set
 
-    init {
-        // auto-open Oga's chat if it's the only bot (feels like v0.1), else home
-    }
-
-    // navigation
+    // navigation actions
     fun openBot(id: String) {
         currentBot = BotRegistry.get(context, id) ?: return
         messages = store.load(id)
         error = null
         streamingText = ""
         isStreaming = false
-        screen = Screen.CHAT
+        stack.add(Screen.CHAT)
     }
 
-    fun goHome() {
-        screen = Screen.HOME
-        currentBot = null
-        messages = emptyList()
-        streamingText = ""
-        isStreaming = false
-        error = null
-    }
-
-    fun openWizard() { screen = Screen.WIZARD }
+    fun openWizard() { stack.add(Screen.WIZARD) }
 
     fun openMemory() {
         memoryDraft = memory.loadProfile(currentBot?.id ?: return)
-        screen = Screen.MEMORY
+        stack.add(Screen.MEMORY)
     }
+
+    fun openBotSettings() { stack.add(Screen.BOT_SETTINGS) }
+    fun openSetup() { stack.add(Screen.SETUP) }
 
     // wizard
     fun createBot(name: String, personaText: String, colorIndex: Int) {
         val p = BotRegistry.create(context, name, personaText, colorIndex)
         bots = BotRegistry.list(context)
+        goHome()
         openBot(p.id)
+        // remove HOME+CHAT duplication: keep single CHAT on stack
+        if (stack.size > 2) stack.removeAt(1)
+    }
+
+    // bot settings
+    fun updateBot(name: String, personaText: String, colorIndex: Int) {
+        val bot = currentBot ?: return
+        val updated = bot.copy(name = name.trim(), systemPrompt = personaText.trim(), colorIndex = colorIndex)
+        BotRegistry.save(context, updated)
+        currentBot = updated
+        bots = BotRegistry.list(context)
+        back()
+    }
+
+    fun deleteBot() {
+        val bot = currentBot ?: return
+        BotRegistry.delete(context, bot.id)
+        store.delete(bot.id)
+        bots = BotRegistry.list(context)
+        goHome()
     }
 
     // memory editor
@@ -129,24 +155,13 @@ class OgabotViewModel(app: Application) : AndroidViewModel(app) {
     fun saveMemory() {
         val id = currentBot?.id ?: return
         memory.saveProfile(id, memoryDraft)
-        goHome()
+        back()
     }
 
     // setup
     fun saveProvider(cfg: ProviderConfig) {
         VaultStore.saveProvider(context, cfg)
         provider = cfg
-        showSetup = false
-    }
-
-    fun openSetup() { showSetup = true }
-    fun closeSetup() { showSetup = false }
-
-    fun goBack() {
-        when (screen) {
-            Screen.CHAT, Screen.WIZARD, Screen.MEMORY -> goHome()
-            Screen.HOME -> {}
-        }
     }
 
     // chat
