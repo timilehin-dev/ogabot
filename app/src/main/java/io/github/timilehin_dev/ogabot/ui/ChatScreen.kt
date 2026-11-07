@@ -7,6 +7,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +26,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AssistChip
@@ -76,29 +78,38 @@ fun ChatScreen(vm: OgabotViewModel) {
                     titleContentColor = MaterialTheme.colorScheme.onSurface
                 ),
                 navigationIcon = {
-                    Box(
-                        Modifier
-                            .padding(start = 12.dp)
-                            .size(36.dp)
-                            .background(avatarBrushFor(vm.currentBot?.colorIndex ?: 0), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            (vm.currentBot?.name?.take(1) ?: "O").uppercase(),
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
-                        )
+                    IconButton(onClick = { vm.back() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
                 title = {
-                    Column {
-                        Text(vm.currentBot?.name ?: "Bot", style = MaterialTheme.typography.titleLarge)
-                        Text(
-                            "always on \u00b7 on-device",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    Row(
+                        Modifier.clickable(
+                            interactionSource = androidx.compose.foundation.interaction.MutableInteractionSource(),
+                            indication = null
+                        ) { vm.openBotSettings() },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            Modifier.size(34.dp).background(avatarBrushFor(vm.currentBot?.colorIndex ?: 0), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                (vm.currentBot?.name?.take(1) ?: "O").uppercase(),
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        }
+                        Spacer(Modifier.size(10.dp))
+                        Column {
+                            Text(vm.currentBot?.name ?: "Bot", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "always on \u00b7 on-device",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 },
                 actions = {
