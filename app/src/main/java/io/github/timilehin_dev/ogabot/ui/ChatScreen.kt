@@ -114,6 +114,13 @@ fun ChatScreen(vm: OgabotViewModel) {
                     }
                 },
                 actions = {
+                    TextButton(onClick = { vm.openRoutines() }) {
+                        Text(
+                            "Routines",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                     TextButton(onClick = { vm.openMemory() }) {
                         Text(
                             "Memory",
