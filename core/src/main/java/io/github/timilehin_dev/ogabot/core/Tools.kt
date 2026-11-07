@@ -55,7 +55,10 @@ data class ToolGrants(val tiers: Map<String, String> = emptyMap()) {
                 "open_uri" to "ask",
                 "memory_write" to "auto",
                 "list_bots" to "auto",
-                "propose_bot" to "ask"
+                "propose_bot" to "ask",
+                "shell" to "ask",
+                "schedule_routine" to "auto",
+                "list_routines" to "auto"
             )
         )
     }
