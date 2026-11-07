@@ -11,9 +11,18 @@ import kotlinx.serialization.json.jsonObject
 /** The built-in Kotlin tool implementations. Executed on Dispatchers.IO by the caller. */
 class BuiltinTools(private val context: Context) {
 
+    val python = PythonTools(context).also { it.ensureBootstrapped() }
+    val bridge = TermuxBridge(context)
+
     private val json = Json { ignoreUnknownKeys = true }
 
-    val descriptors: List<ToolDescriptor> = listOf(
+    val descriptors: List<ToolDescriptor> by lazy {
+        builtinDescriptors + python.descriptors().map {
+            it.copy(description = it.description)
+        }
+    }
+
+    private val builtinDescriptors: List<ToolDescriptor> = listOf(
         ToolDescriptor(
             "http_fetch",
             "Fetch a URL via HTTP GET and return the response body (truncated to 8000 chars). Use for APIs and simple pages.",
@@ -48,6 +57,26 @@ class BuiltinTools(private val context: Context) {
             "propose_bot",
             "DRAFT a new bot for the user to approve. Provide name, persona (job description), and avatar color index 0-5. The user MUST approve before the bot is created — never claim a bot was created.",
             "{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\"},\"persona\":{\"type\":\"string\"},\"color\":{\"type\":\"integer\"}},\"required\":[\"name\",\"persona\"]}"
+        ),
+        ToolDescriptor(
+            "shell",
+            "Run a shell command on the host (Termux deep access). Ask-tier; fails cleanly when Termux is not running.",
+            "{\"type\":\"object\",\"properties\":{\"command\":{\"type\":\"string\"}},\"required\":[\"command\"]}"
+        ),
+        ToolDescriptor(
+            "schedule_routine",
+            "Create a scheduled routine owned by THIS bot. Provide task (what to do) and when (plain language like 'every day at 08:00').",
+            "{\"type\":\"object\",\"properties\":{\"task\":{\"type\":\"string\"},\"when\":{\"type\":\"string\"}},\"required\":[\"task\",\"when\"]}"
+        ),
+        ToolDescriptor(
+            "list_routines",
+            "List this bot's routines (name, schedule, last run).",
+            "{\"type\":\"object\",\"properties\":{},\"required\":[]}"
+        ),
+        ToolDescriptor(
+            "run_python",
+            "Run one of the installed Python tools by name with keyword arguments (args object). Use the tool names listed above from the Python library.",
+            "{\"type\":\"object\",\"properties\":{\"tool\":{\"type\":\"string\"},\"args\":{\"type\":\"object\"}},\"required\":[\"tool\"]}"
         )
     )
 
@@ -59,6 +88,48 @@ class BuiltinTools(private val context: Context) {
         val start = System.currentTimeMillis()
         val (ok, output) = try {
             when (call.tool) {
+                "run_python" -> {
+                    val toolName = str(args, "tool")
+                    val kwargs = (args["args"] as? kotlinx.serialization.json.JsonObject)
+                        ?.mapValues { it.value.jsonPrimitive.content } ?: emptyMap()
+                    val (ok2, out2) = python.execute(toolName, kwargs)
+                    ok2 to out2
+                }
+                in python.list().map { it.name } -> {
+                    val kwargs = args.mapValues { it.value.jsonPrimitive.content }
+                    val (ok2, out2) = python.execute(call.tool, kwargs)
+                    ok2 to out2
+                }
+                "shell" -> {
+                    val (ok2, out2) = bridge.run(str(args, "command"))
+                    ok2 to out2
+                }
+                "schedule_routine" -> {
+                    val parsed = RoutineStore.parseSchedule(str(args, "when"))
+                    if (parsed == null) false to "Could not read the schedule. Use plain words like 'every day at 08:00'."
+                    else {
+                        val task = str(args, "task")
+                        if (task.isBlank()) false to "Task description required."
+                        else {
+                            val r = Routine(
+                                id = "rt" + System.currentTimeMillis().toString(36),
+                                botId = botId,
+                                name = task.take(24) + if (task.length > 24) "…" else "",
+                                task = task, hour = parsed.first, minute = parsed.second, days = parsed.third
+                            )
+                            if (RoutineStore(context).add(r)) {
+                                // scheduling happens in the app layer; surface instruction
+                                true to "ROUTINE CREATED: '" + r.name + "' runs " + r.scheduleLabel() +
+                                    ". The app will schedule it; confirm to the user that it is set."
+                            } else false to "Failed: name already used or 50-routine cap reached."
+                        }
+                    }
+                }
+                "list_routines" -> {
+                    val rs = RoutineStore(context).list(botId)
+                    if (rs.isEmpty()) true to "No routines yet."
+                    else true to rs.joinToString("\n") { "- " + it.name + ": " + it.scheduleLabel() }
+                }
                 "http_fetch" -> fetch(str(args, "url"), stripTags = false)
                 "web_read" -> fetch(str(args, "url"), stripTags = true)
                 "notify" -> notifyBot(str(args, "title"), str(args, "body"))
