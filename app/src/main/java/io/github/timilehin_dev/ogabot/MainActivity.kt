@@ -26,6 +26,8 @@ import io.github.timilehin_dev.ogabot.core.ChatMessage
 import io.github.timilehin_dev.ogabot.core.ChatStore
 import io.github.timilehin_dev.ogabot.core.MemoryStore
 import io.github.timilehin_dev.ogabot.core.OpenAiClient
+import io.github.timilehin_dev.ogabot.core.Routine
+import io.github.timilehin_dev.ogabot.core.RoutineStore
 import io.github.timilehin_dev.ogabot.core.ProviderConfig
 import io.github.timilehin_dev.ogabot.core.StreamEvent
 import io.github.timilehin_dev.ogabot.core.VaultStore
@@ -34,6 +36,7 @@ import io.github.timilehin_dev.ogabot.ui.BotSettingsScreen
 import io.github.timilehin_dev.ogabot.ui.ChatScreen
 import io.github.timilehin_dev.ogabot.ui.HomeScreen
 import io.github.timilehin_dev.ogabot.ui.MemoryScreen
+import io.github.timilehin_dev.ogabot.ui.RoutinesScreen
 import io.github.timilehin_dev.ogabot.ui.OgabotTheme
 import io.github.timilehin_dev.ogabot.ui.SetupScreen
 import io.github.timilehin_dev.ogabot.ui.WizardScreen
@@ -42,7 +45,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 
-enum class Screen { HOME, CHAT, WIZARD, MEMORY, BOT_SETTINGS, SETUP, AUDIT }
+enum class Screen { HOME, CHAT, WIZARD, MEMORY, ROUTINES, BOT_SETTINGS, SETUP, AUDIT }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,6 +53,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             OgabotTheme {
                 val vm: OgabotViewModel = viewModel()
+                androidx.compose.runtime.LaunchedEffect(Unit) {
+                    RoutineScheduler.rescheduleAll(applicationContext)
+                }
                 if (vm.provider == null) {
                     // first-run onboarding: no way past it until a provider is connected
                     SetupScreen(vm = vm, isOnboarding = true, onClose = {})
@@ -63,6 +69,7 @@ class MainActivity : ComponentActivity() {
                         Screen.BOT_SETTINGS -> BotSettingsScreen(vm)
                         Screen.SETUP -> SetupScreen(vm, isOnboarding = false, onClose = { vm.back() })
                         Screen.AUDIT -> AuditScreen(vm)
+                        Screen.ROUTINES -> RoutinesScreen(vm)
                     }
                 }
             }
@@ -133,8 +140,54 @@ class OgabotViewModel(app: Application) : AndroidViewModel(app) {
     fun openBotSettings() { stack.add(Screen.BOT_SETTINGS) }
     fun openSetup() { stack.add(Screen.SETUP) }
     fun openAudit() { stack.add(Screen.AUDIT) }
+    fun openRoutines() {
+        val bot = currentBot?.id
+        routines = if (bot == null) emptyList() else routineStore.list(bot)
+        stack.add(Screen.ROUTINES)
+    }
 
     fun auditRecent() = audit.recent(100)
+
+    // --- routines (Phase 4) ---
+    val routineStore by lazy { RoutineStore(getApplication()) }
+    var routines by mutableStateOf<List<Routine>>(emptyList())
+        private set
+
+    fun createRoutine(task: String, hour: Int, minute: Int, days: List<Int>): Boolean {
+        val bot = currentBot ?: return false
+        val r = Routine(
+            id = "rt" + System.currentTimeMillis().toString(36),
+            botId = bot.id,
+            name = task.take(24) + if (task.length > 24) "…" else "",
+            task = task,
+            hour = hour,
+            minute = minute,
+            days = days
+        )
+        val ok = routineStore.add(r)
+        if (ok) {
+            routines = routineStore.list(bot.id)
+            RoutineScheduler.scheduleExact(getApplication(), r)
+        }
+        return ok
+    }
+
+    fun toggleRoutine(id: String, enabled: Boolean) {
+        val bot = currentBot?.id ?: return
+        val r = routineStore.list(bot).firstOrNull { it.id == id } ?: return
+        routineStore.update(r.copy(enabled = enabled))
+        routines = routineStore.list(bot)
+        if (enabled) RoutineScheduler.scheduleExact(getApplication(), r.copy(enabled = true))
+        else RoutineScheduler.cancel(getApplication(), r)
+    }
+
+    fun deleteRoutine(id: String) {
+        val bot = currentBot?.id ?: return
+        val r = routineStore.list(bot).firstOrNull { it.id == id } ?: return
+        RoutineScheduler.cancel(getApplication(), r)
+        routineStore.remove(bot, id)
+        routines = routineStore.list(bot)
+    }
 
     // wizard
     fun createBot(name: String, personaText: String, colorIndex: Int) {
