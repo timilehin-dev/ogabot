@@ -38,7 +38,7 @@ import io.github.timilehin_dev.ogabot.OgabotViewModel
 import io.github.timilehin_dev.ogabot.core.ProviderConfig
 
 @Composable
-fun SetupScreen(vm: OgabotViewModel, onClose: () -> Unit) {
+fun SetupScreen(vm: OgabotViewModel, isOnboarding: Boolean, onClose: () -> Unit) {
     var endpoint by remember { mutableStateOf(vm.provider?.endpoint ?: "https://ollama.com/v1") }
     var model by remember { mutableStateOf(vm.provider?.model ?: "gemma4:31b") }
     var key by remember { mutableStateOf("") }
@@ -57,10 +57,16 @@ fun SetupScreen(vm: OgabotViewModel, onClose: () -> Unit) {
             Text("O", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 22.sp)
         }
         Spacer(Modifier.height(14.dp))
-        Text("Wake your first bot", style = MaterialTheme.typography.headlineSmall)
+        Text(
+            if (isOnboarding) "Welcome to Ogabot" else "Model provider",
+            style = MaterialTheme.typography.headlineSmall
+        )
         Spacer(Modifier.height(6.dp))
         Text(
-            "Connect any OpenAI-compatible provider. The key is encrypted on this device.",
+            if (isOnboarding)
+                "Connect a model provider to wake your bots. Any OpenAI-compatible endpoint works; the key is encrypted on this device."
+            else
+                "Applies to all bots. The key is encrypted on this device.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -118,11 +124,11 @@ fun SetupScreen(vm: OgabotViewModel, onClose: () -> Unit) {
                 vm.saveProvider(ProviderConfig(endpoint.trim(), k, model.trim()))
                 onClose()
             },
-            enabled = endpoint.isNotBlank() && model.isNotBlank(),
+            enabled = endpoint.isNotBlank() && model.isNotBlank() && (key.isNotBlank() || vm.provider != null),
             shape = RoundedCornerShape(28.dp),
             modifier = Modifier.fillMaxWidth().height(52.dp)
         ) {
-            Text(if (vm.provider == null) "Save & start chatting" else "Save changes")
+            Text(if (isOnboarding) "Start chatting" else "Save changes")
         }
         if (vm.provider != null) {
             TextButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) {
