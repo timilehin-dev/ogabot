@@ -450,6 +450,12 @@ class OgabotViewModel(app: Application) : AndroidViewModel(app) {
                         if (proposal != null && call.tool == "propose_bot") {
                             proposedBot = proposal
                         }
+                        if (call.tool == "schedule_routine" && tagged.ok && tagged.output.startsWith("ROUTINE CREATED:")) {
+                            // schedule the newest routine for this bot
+                            val store2 = routineStore
+                            val newest = store2.list(botId).maxByOrNull { it.createdAt }
+                            if (newest != null) RoutineScheduler.scheduleExact(getApplication(), newest)
+                        }
                     }
                 }
             }
