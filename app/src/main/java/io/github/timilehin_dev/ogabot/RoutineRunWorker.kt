@@ -96,11 +96,11 @@ class RoutineRunWorker(context: Context, params: WorkerParameters) : Worker(cont
         var latest: List<ChatMessage> = history
         var finalText = ""
         // up to 3 tool segments per routine turn (bounded autonomy)
-        for (segment in 0 until 3) {
-            val full = listOf(ChatMessage("system", system)) + latest
-            val sb = StringBuilder()
-            var gotError: String? = null
-            runBlocking {
+        runBlocking {
+            for (segment in 0 until 3) {
+                val full = listOf(ChatMessage("system", system)) + latest
+                val sb = StringBuilder()
+                var gotError: String? = null
                 OpenAiClient(cfg).streamChat(full).collect { ev ->
                     when (ev) {
                         is StreamEvent.Delta -> sb.append(ev.text)
@@ -108,20 +108,20 @@ class RoutineRunWorker(context: Context, params: WorkerParameters) : Worker(cont
                         StreamEvent.Done -> {}
                     }
                 }
-            }
-            val text = sb.toString()
-            val calls = extractCalls(text)
-            if (calls.isEmpty()) {
-                finalText = text
-                break
-            }
-            // execute allowed tools (background: ask-tier SKIPPED) — results are plain strings
-            val results = tools.executeAllowed(botId, calls)
-            latest = latest + ChatMessage("user",
-                "[Tool results]\n" + results.joinToString("\n") { r -> r })
-            if (results.isEmpty()) {
-                finalText = text
-                break
+                val text = sb.toString()
+                val calls = extractCalls(text)
+                if (calls.isEmpty()) {
+                    finalText = text
+                    break
+                }
+                // execute allowed tools (background: ask-tier SKIPPED) — results are plain strings
+                val results = tools.executeAllowed(botId, calls)
+                latest = latest + ChatMessage("user",
+                    "[Tool results]\n" + results.joinToString("\n") { r -> r })
+                if (results.isEmpty()) {
+                    finalText = text
+                    break
+                }
             }
         }
         return finalText
