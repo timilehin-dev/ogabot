@@ -1,11 +1,12 @@
 # Changelog
 
-## v0.0.1 — Phase 0: Repo & CI foundation
-- Gradle skeleton: :app (Compose hello world) + :engine, :bots, :tools, :core placeholders
-- GitHub Actions: push → debug APK artifact; tag v* → APK attached to Release
-- Docs seeded: BUILD_PLAN / ARCHITECTURE / INSTALL / DEV_SETUP
-- Note: AGP 8.7.3 + Kotlin 2.0.21 + Gradle 8.9 for a high-probability first green build;
-  upgrade to AGP 9.x (Zafiro parity) planned for Phase 3 when okia is vendored.
+## v0.1.0 — Phase 1: model layer & streaming chat
+- OpenAI-compatible SSE streaming client (OkHttp + okhttp-sse + kotlinx.serialization) in :core
+- Provider setup screen with presets (Ollama cloud / OpenAI / OpenRouter); API key encrypted with Android Keystore AES-GCM
+- Seeded bot "Oga" (persona persisted at files/bots/oga/bot.json)
+- Chat UI: streaming bubbles, auto-scroll, retryable error states (401/404/429/network mapped to human messages)
+- Thread persistence: JSON snapshot at files/oga_thread.json, restored on restart (Room index deferred to Phase 2 — meaningful once multiple threads exist)
+- INTERNET permission added
 
 ## Phase 0 — EXIT TEST PASSED (2026-11-07)
 - v0.0.1 APK built by CI (tag run, green in ~4 min)
