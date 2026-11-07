@@ -4,6 +4,17 @@ plugins {
     id("com.android.application")
     kotlin("android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("com.chaquo.python")
+}
+
+chaquopy {
+    defaultConfig {
+        version = "3.11"
+        pip {
+            install("requests")
+            install("beautifulsoup4")
+        }
+    }
 }
 
 val ciKeystorePath: String? = System.getenv("OGABOT_KEYSTORE_PATH")
