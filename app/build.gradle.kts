@@ -18,8 +18,8 @@ android {
         applicationId = "io.github.timilehin_dev.ogabot"
         minSdk = 26
         targetSdk = 34
-        versionCode = 6
-        versionName = "0.3.0"
+        versionCode = 7
+        versionName = "0.4.0-beta1"
     }
 
     signingConfigs {
@@ -64,4 +64,5 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 }
