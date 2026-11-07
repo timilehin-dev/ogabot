@@ -39,7 +39,7 @@ fun MemoryScreen(vm: OgabotViewModel) {
                     titleContentColor = MaterialTheme.colorScheme.onSurface
                 ),
                 navigationIcon = {
-                    IconButton(onClick = { vm.goBack() }) {
+                    IconButton(onClick = { vm.back() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
