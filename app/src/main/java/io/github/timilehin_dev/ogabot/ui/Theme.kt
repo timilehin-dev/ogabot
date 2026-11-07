@@ -27,6 +27,17 @@ val CodeBg = Color(0xFF111014)
 val CodeFg = Color(0xFF9FE0C8)
 val Danger = Color(0xFFFF7A7A)
 
+val BotGradients: List<List<Color>> = listOf(
+    listOf(Color(0xFF6C7BFF), Color(0xFF9B6CFF)),
+    listOf(Color(0xFF00C2A8), Color(0xFF0091FF)),
+    listOf(Color(0xFFFF8A65), Color(0xFFFF5470)),
+    listOf(Color(0xFFFFC940), Color(0xFFFF8A00)),
+    listOf(Color(0xFF7CE495), Color(0xFF00B8A9)),
+    listOf(Color(0xFFB57BFF), Color(0xFFFF6FD8))
+)
+
+fun avatarBrushFor(index: Int): Brush = Brush.linearGradient(BotGradients[index % BotGradients.size])
+
 val AvatarBrush = Brush.linearGradient(listOf(Color(0xFF6C7BFF), Color(0xFF9B6CFF)))
 
 private val OgabotColors = darkColorScheme(
