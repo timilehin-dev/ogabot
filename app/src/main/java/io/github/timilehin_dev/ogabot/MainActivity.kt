@@ -142,6 +142,13 @@ class OgabotViewModel(app: Application) : AndroidViewModel(app) {
     fun openSetup() { showSetup = true }
     fun closeSetup() { showSetup = false }
 
+    fun goBack() {
+        when (screen) {
+            Screen.CHAT, Screen.WIZARD, Screen.MEMORY -> goHome()
+            Screen.HOME -> {}
+        }
+    }
+
     // chat
     fun send(text: String) {
         if (isStreaming || text.isBlank() || currentBot == null) return
