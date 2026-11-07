@@ -49,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -304,7 +305,8 @@ fun InputBar(value: String, onValueChange: (String) -> Unit, enabled: Boolean, o
                 Modifier
                     .size(52.dp)
                     .background(
-                        if (canSend) AvatarBrush else MaterialTheme.colorScheme.surfaceVariant,
+                        if (canSend) AvatarBrush
+                        else SolidColor(MaterialTheme.colorScheme.surfaceVariant),
                         CircleShape
                     ),
                 contentAlignment = Alignment.Center
