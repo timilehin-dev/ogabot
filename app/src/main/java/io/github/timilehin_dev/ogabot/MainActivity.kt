@@ -319,13 +319,13 @@ class OgabotViewModel(app: Application) : AndroidViewModel(app) {
                 }
 
                 when (decision) {
+                    is ApprovalGate.Decision.Ask -> {
+                        blocked = PendingApproval(call.callId, call.tool, call.argsJson, background = false)
+                        break
+                    }
                     ApprovalGate.Decision.Deny -> {
                         results += ToolCallResult(call.callId, call.tool, false,
                             "Refused: this tool is set to never-allow for you. Do not retry it.", 0, "never")
-                    }
-                    ApprovalGate.Decision.Ask -> {
-                        blocked = PendingApproval(call.callId, call.tool, call.argsJson, background = false)
-                        break
                     }
                     ApprovalGate.Decision.Allow -> {
                         val args = try {
