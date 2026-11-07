@@ -26,7 +26,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -105,7 +104,7 @@ fun ChatScreen(vm: OgabotViewModel) {
                 actions = {
                     IconButton(onClick = { vm.openMemory() }) {
                         Icon(
-                            Icons.Filled.Description,
+                            Icons.Filled.List,
                             contentDescription = "Memory",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -126,7 +125,9 @@ fun ChatScreen(vm: OgabotViewModel) {
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 if (vm.messages.isEmpty() && !vm.isStreaming) {
-                    item { EmptyState(vm.currentBot?.name ?: "Bot") { vm.send(it) } }
+                    val emptyBotName = vm.currentBot?.name ?: "Bot"
+                    val emptyColor = vm.currentBot?.colorIndex ?: 0
+                    item { EmptyState(emptyBotName, emptyColor) { vm.send(it) } }
                 }
                 items(vm.messages) { m ->
                     if (m.role == "user") UserBubble(m.content) else AssistantBubble(m.content)
@@ -232,13 +233,13 @@ fun TypingDots() {
 }
 
 @Composable
-fun EmptyState(botName: String, onSuggestion: (String) -> Unit) {
+fun EmptyState(botName: String, avatarColor: Int, onSuggestion: (String) -> Unit) {
     Column(
         Modifier.fillMaxWidth().padding(top = 48.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
-            Modifier.size(64.dp).background(avatarBrushFor(vm.currentBot?.colorIndex ?: 0), CircleShape),
+            Modifier.size(64.dp).background(avatarBrushFor(avatarColor), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Text("O", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 26.sp)
