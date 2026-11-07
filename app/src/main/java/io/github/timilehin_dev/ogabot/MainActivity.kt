@@ -20,6 +20,7 @@ import io.github.timilehin_dev.ogabot.core.BuiltinTools
 import io.github.timilehin_dev.ogabot.core.Tier
 import io.github.timilehin_dev.ogabot.core.ToolCallRequest
 import io.github.timilehin_dev.ogabot.core.ToolCallResult
+import io.github.timilehin_dev.ogabot.core.ToolGrants
 import io.github.timilehin_dev.ogabot.core.BotSeed
 import io.github.timilehin_dev.ogabot.core.ChatMessage
 import io.github.timilehin_dev.ogabot.core.ChatStore
@@ -36,6 +37,9 @@ import io.github.timilehin_dev.ogabot.ui.OgabotTheme
 import io.github.timilehin_dev.ogabot.ui.SetupScreen
 import io.github.timilehin_dev.ogabot.ui.WizardScreen
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 
 enum class Screen { HOME, CHAT, WIZARD, MEMORY, BOT_SETTINGS, SETUP }
 
@@ -270,10 +274,10 @@ class OgabotViewModel(app: Application) : AndroidViewModel(app) {
         val t = text.trim()
         if (!t.startsWith("[") || !t.endsWith("]")) return emptyList()
         return try {
-            val arr = kotlinx.serialization.json.Json.parseToJsonElement(t)
-                as? kotlinx.serialization.json.JsonArray ?: return emptyList()
+            val arr = Json.parseToJsonElement(t)
+                as? JsonArray ?: return emptyList()
             arr.mapNotNull { el ->
-                val obj = el as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+                val obj = el as? JsonObject ?: return@mapNotNull null
                 val name = obj["call"]?.toString()?.trim('"') ?: return@mapNotNull null
                 val args = obj["args"]?.toString() ?: "{}"
                 ToolCallRequest(
@@ -295,18 +299,23 @@ class OgabotViewModel(app: Application) : AndroidViewModel(app) {
                 } ?: ToolGrants.DEFAULTS
                 val tier = grants.tierFor(call.tool)
 
-                val decision = when (tier) {
+                val decision: ApprovalGate.Decision = when (tier) {
                     Tier.NEVER -> ApprovalGate.Decision.Deny
                     Tier.ASK -> {
                         val custom = approvalGate.decide(botId, call.tool, call.argsJson, background = false)
-                        if (custom is ApprovalGate.Decision.Ask) ApprovalGate.Decision.Ask(false)
-                        else if (approvalGate.autoAllowMatch(call.tool, call.argsJson)) ApprovalGate.Decision.Allow
-                        else ApprovalGate.Decision.Ask(false)
+                        when (custom) {
+                            is ApprovalGate.Decision.Ask -> ApprovalGate.Decision.Ask(false)
+                            ApprovalGate.Decision.Allow ->
+                                if (approvalGate.autoAllowMatch(call.tool, call.argsJson)) ApprovalGate.Decision.Allow
+                                else ApprovalGate.Decision.Ask(false)
+                            ApprovalGate.Decision.Deny -> ApprovalGate.Decision.Deny
+                        }
                     }
                     Tier.AUTO -> {
                         if (approvalGate.askFirstMatch(call.tool, call.argsJson)) ApprovalGate.Decision.Ask(false)
                         else ApprovalGate.Decision.Allow
                     }
+                    else -> ApprovalGate.Decision.Allow
                 }
 
                 when (decision) {
@@ -320,10 +329,10 @@ class OgabotViewModel(app: Application) : AndroidViewModel(app) {
                     }
                     ApprovalGate.Decision.Allow -> {
                         val args = try {
-                            kotlinx.serialization.json.Json.parseToJsonElement(call.argsJson).let {
-                                it as kotlinx.serialization.json.JsonObject
+                            Json.parseToJsonElement(call.argsJson).let {
+                                it as JsonObject
                             }
-                        } catch (e: Exception) { kotlinx.serialization.json.JsonObject(emptyMap()) }
+                        } catch (e: Exception) { JsonObject(emptyMap()) }
                         val r = builtinTools.execute(botId, call, args)
                         val tagged = if (r.tier.isEmpty()) r.copy(tier = "auto") else r
                         audit.record(tagged, botId)
@@ -373,8 +382,8 @@ class OgabotViewModel(app: Application) : AndroidViewModel(app) {
         pendingApproval = null
         viewModelScope.launch {
             val args = try {
-                kotlinx.serialization.json.Json.parseToJsonElement(pa.argsJson) as kotlinx.serialization.json.JsonObject
-            } catch (e: Exception) { kotlinx.serialization.json.JsonObject(emptyMap()) }
+                Json.parseToJsonElement(pa.argsJson) as JsonObject
+            } catch (e: Exception) { JsonObject(emptyMap()) }
             val r = builtinTools.execute(botId, ToolCallRequest(pa.callId, pa.tool, pa.argsJson), args)
             val tagged = r.copy(tier = if (alwaysAllow) "always-allow" else "ask")
             audit.record(tagged, botId)
