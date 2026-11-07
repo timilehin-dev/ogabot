@@ -23,6 +23,10 @@ class ChatStore(context: Context) {
         return try { json.decodeFromString<List<ChatMessage>>(f.readText()) } catch (e: Exception) { emptyList() }
     }
 
+    fun delete(botId: String) {
+        File(dir, "$botId.json").delete()
+    }
+
     fun save(botId: String, messages: List<ChatMessage>) {
         dir.mkdirs()
         try {
