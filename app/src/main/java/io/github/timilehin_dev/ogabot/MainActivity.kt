@@ -29,6 +29,7 @@ import io.github.timilehin_dev.ogabot.core.OpenAiClient
 import io.github.timilehin_dev.ogabot.core.ProviderConfig
 import io.github.timilehin_dev.ogabot.core.StreamEvent
 import io.github.timilehin_dev.ogabot.core.VaultStore
+import io.github.timilehin_dev.ogabot.ui.AuditScreen
 import io.github.timilehin_dev.ogabot.ui.BotSettingsScreen
 import io.github.timilehin_dev.ogabot.ui.ChatScreen
 import io.github.timilehin_dev.ogabot.ui.HomeScreen
@@ -41,7 +42,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 
-enum class Screen { HOME, CHAT, WIZARD, MEMORY, BOT_SETTINGS, SETUP }
+enum class Screen { HOME, CHAT, WIZARD, MEMORY, BOT_SETTINGS, SETUP, AUDIT }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,6 +62,7 @@ class MainActivity : ComponentActivity() {
                         Screen.MEMORY -> MemoryScreen(vm)
                         Screen.BOT_SETTINGS -> BotSettingsScreen(vm)
                         Screen.SETUP -> SetupScreen(vm, isOnboarding = false, onClose = { vm.back() })
+                        Screen.AUDIT -> AuditScreen(vm)
                     }
                 }
             }
@@ -130,6 +132,9 @@ class OgabotViewModel(app: Application) : AndroidViewModel(app) {
 
     fun openBotSettings() { stack.add(Screen.BOT_SETTINGS) }
     fun openSetup() { stack.add(Screen.SETUP) }
+    fun openAudit() { stack.add(Screen.AUDIT) }
+
+    fun auditRecent() = audit.recent(100)
 
     // wizard
     fun createBot(name: String, personaText: String, colorIndex: Int) {
