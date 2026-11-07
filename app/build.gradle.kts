@@ -18,8 +18,8 @@ android {
         applicationId = "io.github.timilehin_dev.ogabot"
         minSdk = 26
         targetSdk = 34
-        versionCode = 4
-        versionName = "0.2.0"
+        versionCode = 5
+        versionName = "0.2.1"
     }
 
     signingConfigs {
