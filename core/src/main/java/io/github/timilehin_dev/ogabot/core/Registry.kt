@@ -47,6 +47,10 @@ object BotRegistry {
         File(dir, "bot.json").writeText(json.encodeToString(persona))
     }
 
+    fun delete(context: Context, id: String) {
+        File(botsDir(context), id).deleteRecursively()
+    }
+
     fun create(context: Context, name: String, personaText: String, colorIndex: Int): BotPersona {
         val cleanName = name.trim()
         val id = cleanName.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-')
