@@ -34,11 +34,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.timilehin_dev.ogabot.ChatViewModel
+import io.github.timilehin_dev.ogabot.OgabotViewModel
 import io.github.timilehin_dev.ogabot.core.ProviderConfig
 
 @Composable
-fun SetupScreen(vm: ChatViewModel, onClose: () -> Unit) {
+fun SetupScreen(vm: OgabotViewModel, onClose: () -> Unit) {
     var endpoint by remember { mutableStateOf(vm.provider?.endpoint ?: "https://ollama.com/v1") }
     var model by remember { mutableStateOf(vm.provider?.model ?: "gemma4:31b") }
     var key by remember { mutableStateOf("") }
