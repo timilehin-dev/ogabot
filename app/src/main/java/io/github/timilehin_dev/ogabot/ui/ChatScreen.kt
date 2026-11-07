@@ -151,6 +151,7 @@ fun ChatScreen(vm: OgabotViewModel) {
             InputBar(
                 value = input,
                 onValueChange = { input = it },
+                hint = "Message " + (vm.currentBot?.name ?: "") + "\u2026",
                 enabled = !vm.isStreaming,
                 onSend = { vm.send(input); input = "" }
             )
@@ -283,7 +284,13 @@ fun ErrorBanner(message: String, onRetry: () -> Unit, onDismiss: () -> Unit) {
 }
 
 @Composable
-fun InputBar(value: String, onValueChange: (String) -> Unit, enabled: Boolean, onSend: () -> Unit) {
+fun InputBar(
+    value: String,
+    onValueChange: (String) -> Unit,
+    hint: String,
+    enabled: Boolean,
+    onSend: () -> Unit
+) {
     Surface(color = MaterialTheme.colorScheme.background) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
@@ -294,7 +301,7 @@ fun InputBar(value: String, onValueChange: (String) -> Unit, enabled: Boolean, o
                 onValueChange = onValueChange,
                 modifier = Modifier.weight(1f),
                 placeholder = {
-                    Text("Message " + (vm.currentBot?.name ?: "") + "\u2026", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(hint, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 },
                 shape = RoundedCornerShape(26.dp),
                 maxLines = 4,
