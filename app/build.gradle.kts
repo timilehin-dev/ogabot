@@ -1,8 +1,14 @@
+import java.lang.System
+
 plugins {
     id("com.android.application")
     kotlin("android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+
+val ciKeystorePath: String? = System.getenv("OGABOT_KEYSTORE_PATH")
+val ciKeystorePass: String? = System.getenv("OGABOT_KEYSTORE_PASSWORD")
+val ciKeyAlias: String = System.getenv("OGABOT_KEY_ALIAS") ?: "ogabot"
 
 android {
     namespace = "io.github.timilehin_dev.ogabot"
@@ -12,8 +18,32 @@ android {
         applicationId = "io.github.timilehin_dev.ogabot"
         minSdk = 26
         targetSdk = 34
-        versionCode = 3
-        versionName = "0.1.1"
+        versionCode = 4
+        versionName = "0.2.0"
+    }
+
+    signingConfigs {
+        if (ciKeystorePath != null && ciKeystorePass != null) {
+            create("ci") {
+                storeFile = file(ciKeystorePath)
+                storePassword = ciKeystorePass
+                keyAlias = ciKeyAlias
+                keyPassword = ciKeystorePass
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("debug") {
+            if (ciKeystorePath != null && ciKeystorePass != null) {
+                signingConfig = signingConfigs.getByName("ci")
+            }
+        }
+        getByName("release") {
+            if (ciKeystorePath != null && ciKeystorePass != null) {
+                signingConfig = signingConfigs.getByName("ci")
+            }
+        }
     }
 
     compileOptions {
