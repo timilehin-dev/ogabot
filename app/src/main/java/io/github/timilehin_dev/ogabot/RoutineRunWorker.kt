@@ -92,39 +92,39 @@ class RoutineRunWorker(context: Context, params: WorkerParameters) : Worker(cont
         history: List<ChatMessage>,
         tools: BuiltinToolsCompat,
         botId: String
-    ): String = runBlocking {
+    ): String {
         var latest: List<ChatMessage> = history
         var finalText = ""
         // up to 3 tool segments per routine turn (bounded autonomy)
-        repeat(3) {
+        for (segment in 0 until 3) {
             val full = listOf(ChatMessage("system", system)) + latest
             val sb = StringBuilder()
             var gotError: String? = null
-            OpenAiClient(cfg).streamChat(full).collect { ev ->
-                when (ev) {
-                    is StreamEvent.Delta -> sb.append(ev.text)
-                    is StreamEvent.Error -> gotError = ev.message
-                    StreamEvent.Done -> {}
+            runBlocking {
+                OpenAiClient(cfg).streamChat(full).collect { ev ->
+                    when (ev) {
+                        is StreamEvent.Delta -> sb.append(ev.text)
+                        is StreamEvent.Error -> gotError = ev.message
+                        StreamEvent.Done -> {}
+                    }
                 }
             }
             val text = sb.toString()
             val calls = extractCalls(text)
             if (calls.isEmpty()) {
                 finalText = text
-                return@runBlocking
+                break
             }
-            // execute allowed tools (background: ask-tier SKIPPED)
+            // execute allowed tools (background: ask-tier SKIPPED) — results are plain strings
             val results = tools.executeAllowed(botId, calls)
             latest = latest + ChatMessage("user",
-                "[Tool results]\n" + results.joinToString("\n") { r ->
-                    "(${r.tool}) " + (if (r.ok) "OK: " else "ERROR: ") + r.output
-                })
+                "[Tool results]\n" + results.joinToString("\n") { r -> r })
             if (results.isEmpty()) {
                 finalText = text
-                return@runBlocking
+                break
             }
         }
-        finalText
+        return finalText
     }
 
     private fun extractCalls(text: String): List<ToolCallRequestLite> {
