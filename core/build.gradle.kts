@@ -2,6 +2,11 @@ plugins {
     id("com.android.library")
     kotlin("android")
     kotlin("plugin.serialization")
+    id("com.chaquo.python")
+}
+
+chaquopy {
+    defaultConfig { version = "3.11" }
 }
 
 android {
