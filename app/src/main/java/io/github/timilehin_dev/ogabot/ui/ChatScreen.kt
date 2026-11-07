@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List as MemoryListIcon
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AssistChip
@@ -104,7 +105,7 @@ fun ChatScreen(vm: OgabotViewModel) {
                 actions = {
                     IconButton(onClick = { vm.openMemory() }) {
                         Icon(
-                            androidx.compose.material.icons.Icons.Filled.List,
+                            MemoryListIcon,
                             contentDescription = "Memory",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
