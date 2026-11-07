@@ -28,8 +28,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TextButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,6 +63,10 @@ fun HomeScreen(vm: OgabotViewModel) {
                     }
                 },
                 actions = {
+                    TextButton(onClick = { vm.openAudit() }) {
+                        Text("Audit", style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary)
+                    }
                     IconButton(onClick = { vm.openSetup() }) {
                         Icon(
                             Icons.Filled.Settings,
