@@ -101,16 +101,20 @@ class RoutineRunWorker(context: Context, params: WorkerParameters) : Worker(cont
                 val full = listOf(ChatMessage("system", system)) + latest
                 val sb = StringBuilder()
                 var gotError: String? = null
-                OpenAiClient(cfg).streamChat(full).collect { ev ->
+                val fcCalls = mutableListOf<ToolCallRequestLite>()
+                OpenAiClient(cfg).streamChat(full, tools.descriptors()).collect { ev ->
                     when (ev) {
                         is StreamEvent.Delta -> sb.append(ev.text)
+                        is io.github.timilehin_dev.ogabot.core.StreamEvent.ToolCallEvt ->
+                            fcCalls += ToolCallRequestLite(ev.name, ev.argsJson)
                         is StreamEvent.Error -> gotError = ev.message
                         StreamEvent.Done -> {}
                     }
                 }
                 val parsedText = io.github.timilehin_dev.ogabot.core.ToolCallParser.parse(sb.toString())
                 val text = parsedText.prose
-                val calls = parsedText.calls.map { ToolCallRequestLite(it.tool, it.argsJson) }
+                val calls = if (fcCalls.isNotEmpty()) fcCalls
+                            else parsedText.calls.map { ToolCallRequestLite(it.tool, it.argsJson) }
                 if (calls.isEmpty()) {
                     finalText = text
                     break
