@@ -64,10 +64,11 @@ object ToolCallParser {
             val key = s.substring(i, eq).trim().trim(DQ, SQ)
             var j = eq + 1
             while (j < s.length && s[j] == ' ') j++
-            val valueStr = readValue(s, j)
-            if (key.isNotBlank() && valueStr.first != null) {
-                map[key] = toJsonValue(valueStr.first)
-                i = valueStr.second
+            val valuePair = readValue(s, j)
+            val valueStr = valuePair.first
+            if (key.isNotBlank() && valueStr != null) {
+                map[key] = toJsonValue(valueStr)
+                i = valuePair.second
             } else {
                 i = eq + 1
             }
