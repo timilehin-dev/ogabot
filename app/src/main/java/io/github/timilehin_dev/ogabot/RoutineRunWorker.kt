@@ -108,8 +108,9 @@ class RoutineRunWorker(context: Context, params: WorkerParameters) : Worker(cont
                         StreamEvent.Done -> {}
                     }
                 }
-                val text = sb.toString()
-                val calls = extractCalls(text)
+                val parsedText = io.github.timilehin_dev.ogabot.core.ToolCallParser.parse(sb.toString())
+                val text = parsedText.prose
+                val calls = parsedText.calls.map { ToolCallRequestLite(it.tool, it.argsJson) }
                 if (calls.isEmpty()) {
                     finalText = text
                     break
@@ -128,29 +129,9 @@ class RoutineRunWorker(context: Context, params: WorkerParameters) : Worker(cont
     }
 
     private fun extractCalls(text: String): List<ToolCallRequestLite> {
-        val cleaned = text.replace("```json", "```").replace("```", "\n")
-        val start = cleaned.indexOf('[')
-        if (start < 0) return emptyList()
-        var depth = 0; var end = -1; var inString = false; var esc = false
-        for (i in start until cleaned.length) {
-            val c = cleaned[i]
-            if (esc) { esc = false; continue }
-            when {
-                c == '\\' && inString -> esc = true
-                c == '"' -> inString = !inString
-                !inString && c == '[' -> depth++
-                !inString && c == ']' -> { depth--; if (depth == 0) { end = i; break } }
-            }
+        return io.github.timilehin_dev.ogabot.core.ToolCallParser.parse(text).calls.map {
+            ToolCallRequestLite(it.tool, it.argsJson)
         }
-        if (end < 0) return emptyList()
-        return try {
-            val arr = Json.parseToJsonElement(cleaned.substring(start, end + 1)) as? JsonArray ?: return emptyList()
-            arr.mapNotNull { el ->
-                val obj = el as? JsonObject ?: return@mapNotNull null
-                val name = obj["call"]?.toString()?.trim('"') ?: return@mapNotNull null
-                ToolCallRequestLite(name, obj["args"]?.toString() ?: "{}")
-            }
-        } catch (e: Exception) { emptyList() }
     }
 }
 
