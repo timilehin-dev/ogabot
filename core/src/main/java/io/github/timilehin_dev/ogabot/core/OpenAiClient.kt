@@ -65,24 +65,26 @@ class OpenAiClient(private val cfg: ProviderConfig) {
             .post(body.toRequestBody("application/json".toMediaType()))
             .build()
 
-        // accumulate streamed tool-call fragments across chunks
-        val toolAcc = LinkedHashMap<Int, StringBuilder>()   // index -> name+args buffer
+        // accumulate streamed tool-call fragments across chunks (robust to resend styles)
+        val toolNames = HashMap<Int, String>()
+        val toolArgs = HashMap<Int, StringBuilder>()
         val toolIds = HashMap<Int, String>()
+
+        fun flushTool(idx: Int) {
+            val name = toolNames[idx]
+            if (name.isNullOrBlank()) return
+            val args = toolArgs[idx]?.toString() ?: "{}"
+            trySend(StreamEvent.ToolCallEvt(
+                callId = toolIds[idx] ?: ("c" + System.currentTimeMillis().toString(36) + "_" + idx),
+                name = name,
+                argsJson = args.ifBlank { "{}" }
+            ))
+        }
 
         val listener = object : EventSourceListener() {
             override fun onEvent(eventSource: EventSource, id: String?, type: String?, data: String) {
                 if (data == "[DONE]") {
-                    // flush any assembled tool calls
-                    for ((idx, buf) in toolAcc) {
-                        val parts = buf.toString().split("\u0001", limit = 2)
-                        if (parts.size == 2 && parts[0].isNotBlank()) {
-                            trySend(StreamEvent.ToolCallEvt(
-                                callId = toolIds[idx] ?: ("c" + System.currentTimeMillis().toString(36) + "_" + idx),
-                                name = parts[0],
-                                argsJson = parts[1].ifBlank { "{}" }
-                            ))
-                        }
-                    }
+                    for (idx in toolNames.keys) flushTool(idx)
                     trySend(StreamEvent.Done)
                     close()
                     return
@@ -94,22 +96,14 @@ class OpenAiClient(private val cfg: ProviderConfig) {
                     if (!delta.content.isNullOrEmpty()) trySend(StreamEvent.Delta(delta.content))
                     for (tc in delta.tool_calls) {
                         val idx = tc.index
-                        val sb = toolAcc.getOrPut(idx) { StringBuilder() }
                         tc.id?.let { toolIds[idx] = it }
-                        tc.function?.name?.let { sb.append(it).append("\u0001") }
-                        tc.function?.arguments?.let { sb.append(it) }
+                        tc.function?.name?.let { n -> if (toolNames[idx].isNullOrBlank()) toolNames[idx] = n }
+                        tc.function?.arguments?.let { a ->
+                            toolArgs.getOrPut(idx) { StringBuilder() }.append(a)
+                        }
                     }
                     if (choice?.finish_reason == "tool_calls") {
-                        for ((idx, buf) in toolAcc) {
-                            val parts = buf.toString().split("\u0001", limit = 2)
-                            if (parts.size == 2 && parts[0].isNotBlank()) {
-                                trySend(StreamEvent.ToolCallEvt(
-                                    callId = toolIds[idx] ?: ("c" + System.currentTimeMillis().toString(36) + "_" + idx),
-                                    name = parts[0],
-                                    argsJson = parts[1].ifBlank { "{}" }
-                                ))
-                            }
-                        }
+                        for (idx in toolNames.keys) flushTool(idx)
                         trySend(StreamEvent.Done)
                         close()
                     }
