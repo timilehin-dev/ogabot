@@ -21,6 +21,8 @@ class BuiltinToolsCompat(private val context: Context) {
     private val inner = io.github.timilehin_dev.ogabot.core.BuiltinTools(context)
     private val backgroundAllowed = setOf("http_fetch", "web_read", "memory_write", "list_bots")
 
+    fun descriptors() = inner.descriptors
+
     fun toolPromptBlock(): String =
         inner.descriptors.filter { it.name in backgroundAllowed }
             .joinToString("\n") { "- ${it.name}: ${it.description} | params: ${it.parameters}" } +
