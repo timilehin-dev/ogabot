@@ -21,7 +21,7 @@ data class PyToolDef(
  * - Bundled starter tools ship in assets/python/, copied to files/python/ on first run
  * - User/bot-created tools land in files/python/ too (Tool Lab, Phase 5)
  * - Registry: files/python_tools.json
- * - Contract: every tool module defines main(**kwargs) -> str
+ * - Contract: every tool module defines main(d: dict) -> str
  */
 class PythonTools(private val context: Context) {
 
@@ -33,8 +33,8 @@ class PythonTools(private val context: Context) {
         "json_api" to """"
 import json, requests
 
-def main(**kwargs):
-    url = kwargs.get("url", "")
+def main(d):
+    url = d.get("url", "")
     if not url:
         return "ERROR: url required"
     r = requests.get(url, timeout=25, headers={"User-Agent": "Mozilla/5.0"})
@@ -50,8 +50,8 @@ def main(**kwargs):
 import requests
 from bs4 import BeautifulSoup
 
-def main(**kwargs):
-    url = kwargs.get("url", "")
+def main(d):
+    url = d.get("url", "")
     if not url:
         return "ERROR: url required"
     r = requests.get(url, timeout=25, headers={"User-Agent": "Mozilla/5.0"})
@@ -65,8 +65,8 @@ def main(**kwargs):
     return (("[TITLE] " + title + "\\n\\n") if title else "") + text[:8000]
 """.trimIndent(),
         "text_stats" to """"
-def main(**kwargs):
-    text = kwargs.get("text", "")
+def main(d):
+    text = d.get("text", "")
     if not text:
         return "ERROR: text required"
     words = text.split()
@@ -137,9 +137,10 @@ def main(**kwargs):
                 pathList.callAttr("append", dir.absolutePath)
             }
             val module = py.getModule(toolName)
-            val kwMap: Map<String, PyObject> = kwargs.mapValues { PyObject.fromJava(it.value) }
-            val kwargsObj = PyObject.fromMap(kwMap)
-            val result = module.callAttr("main", kwargsObj)
+            val builtins = py.getModule("builtins")
+            val dict = builtins.callAttr("dict")
+            kwargs.forEach { (k, v) -> dict.callAttr("__setitem__", k, v) }
+            val result = module.callAttr("main", dict)
             true to (result.toString().take(8000))
         } catch (e: Exception) {
             false to ("python error: " + (e.message ?: e.javaClass.simpleName))
