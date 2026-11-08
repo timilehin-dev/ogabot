@@ -25,15 +25,39 @@ class OpenAiClient(private val cfg: ProviderConfig) {
         .readTimeout(180, TimeUnit.SECONDS)
         .build()
 
-    fun streamChat(messages: List<ChatMessage>): Flow<StreamEvent> = callbackFlow {
-        val body = json.encodeToString(
-            StreamRequest(
-                model = cfg.model,
-                messages = messages.map { StreamMessage(it.role, it.content) },
-                stream = true,
-                temperature = cfg.temperature
+    fun streamChat(
+        messages: List<ChatMessage>,
+        tools: List<ToolDescriptor>? = null
+    ): Flow<StreamEvent> = callbackFlow {
+        val toolSchemas = tools?.map {
+            ToolSchemaEntry(
+                function = ToolFunctionDef(
+                    name = it.name,
+                    description = it.description,
+                    parameters = it.parameters
+                )
             )
-        )
+        }
+        val body = if (toolSchemas.isNullOrEmpty()) {
+            json.encodeToString(
+                StreamRequest(
+                    model = cfg.model,
+                    messages = messages.map { StreamMessage(it.role, it.content) },
+                    stream = true,
+                    temperature = cfg.temperature
+                )
+            )
+        } else {
+            json.encodeToString(
+                StreamRequestWithTools(
+                    model = cfg.model,
+                    messages = messages.map { StreamMessage(it.role, it.content) },
+                    stream = true,
+                    tools = toolSchemas,
+                    tool_choice = "auto"
+                )
+            )
+        }
         val request = Request.Builder()
             .url(cfg.endpoint.trimEnd('/') + "/chat/completions")
             .header("Authorization", "Bearer " + cfg.apiKey)
@@ -41,17 +65,54 @@ class OpenAiClient(private val cfg: ProviderConfig) {
             .post(body.toRequestBody("application/json".toMediaType()))
             .build()
 
+        // accumulate streamed tool-call fragments across chunks
+        val toolAcc = LinkedHashMap<Int, StringBuilder>()   // index -> name+args buffer
+        val toolIds = HashMap<Int, String>()
+
         val listener = object : EventSourceListener() {
             override fun onEvent(eventSource: EventSource, id: String?, type: String?, data: String) {
                 if (data == "[DONE]") {
+                    // flush any assembled tool calls
+                    for ((idx, buf) in toolAcc) {
+                        val parts = buf.toString().split("\u0001", limit = 2)
+                        if (parts.size == 2 && parts[0].isNotBlank()) {
+                            trySend(StreamEvent.ToolCallEvt(
+                                callId = toolIds[idx] ?: ("c" + System.currentTimeMillis().toString(36) + "_" + idx),
+                                name = parts[0],
+                                argsJson = parts[1].ifBlank { "{}" }
+                            ))
+                        }
+                    }
                     trySend(StreamEvent.Done)
                     close()
                     return
                 }
                 try {
                     val chunk = json.decodeFromString<StreamChunk>(data)
-                    val delta = chunk.choices.firstOrNull()?.delta?.content
-                    if (!delta.isNullOrEmpty()) trySend(StreamEvent.Delta(delta))
+                    val choice = chunk.choices.firstOrNull()
+                    val delta = choice?.delta ?: return
+                    if (!delta.content.isNullOrEmpty()) trySend(StreamEvent.Delta(delta.content))
+                    for (tc in delta.tool_calls) {
+                        val idx = tc.index
+                        val sb = toolAcc.getOrPut(idx) { StringBuilder() }
+                        tc.id?.let { toolIds[idx] = it }
+                        tc.function?.name?.let { sb.append(it).append("\u0001") }
+                        tc.function?.arguments?.let { sb.append(it) }
+                    }
+                    if (choice?.finish_reason == "tool_calls") {
+                        for ((idx, buf) in toolAcc) {
+                            val parts = buf.toString().split("\u0001", limit = 2)
+                            if (parts.size == 2 && parts[0].isNotBlank()) {
+                                trySend(StreamEvent.ToolCallEvt(
+                                    callId = toolIds[idx] ?: ("c" + System.currentTimeMillis().toString(36) + "_" + idx),
+                                    name = parts[0],
+                                    argsJson = parts[1].ifBlank { "{}" }
+                                ))
+                            }
+                        }
+                        trySend(StreamEvent.Done)
+                        close()
+                    }
                 } catch (e: Exception) {
                     // ignore malformed keep-alive lines
                 }
