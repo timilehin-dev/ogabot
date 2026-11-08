@@ -23,9 +23,54 @@ object ToolCallParser {
     fun parse(text: String): Parsed {
         val native = parseNative(text)
         if (native != null) return native
+        val dots = parseDots(text)
+        if (dots != null) return dots
         val jsonCalls = parseJsonArray(text)
         val prose = if (jsonCalls.isNotEmpty()) stripJsonArray(text) else text
-        return Parsed(jsonCalls, prose.trim())
+        return Parsed(jsonCalls, sanitizeDisplay(prose))
+    }
+
+    /** Microsoft dots/ Semantic-Kernel style:
+     *  <dots_function_call><invoke name="tool">{"k": "v"}</invoke></dots_function_call> */
+    private val dotsRegex = Regex(
+        "<dots_function_call>\\s*<invoke\\s+name=\\"([^\\"]+)\\">\\s*([\\s\\S]*?)\\s*</invoke>\\s*</dots_function_call>"
+    )
+
+    fun parseDots(text: String): Parsed? {
+        if (!text.contains("dots_function_call")) return null
+        val calls = mutableListOf<ToolCallRequest>()
+        var prose = text
+        for (m in dotsRegex.findAll(text)) {
+            val name = m.groupValues[1].trim()
+            val argsJson = m.groupValues[2].trim().ifBlank { "{}" }
+            calls += ToolCallRequest(
+                callId = "c" + System.currentTimeMillis().toString(36) + "_" + calls.size,
+                tool = name,
+                argsJson = argsJson
+            )
+            prose = prose.replace(m.value, " ")
+        }
+        if (calls.isEmpty()) return null
+        return Parsed(calls, sanitizeDisplay(prose))
+    }
+
+    /** Also tolerate <invoke name=...> without the wrapper. */
+    private val invokeRegex = Regex(
+        "<invoke\\s+name=\\"([^\\"]+)\\">\\s*([\\s\\S]*?)\\s*</invoke>"
+    )
+
+    /** Guarantee: raw tool-call syntax NEVER reaches the chat UI. */
+    fun sanitizeDisplay(text: String): String {
+        var out = text
+        out = nativeRegex.replace(out, " ")
+        out = dotsRegex.replace(out, " ")
+        out = invokeRegex.replace(out, " ")
+        out = out.replace(Regex("<\\|?tool_call_(start|end)\\|?>"), " ")
+        out = stripJsonArray(out)
+        // "[Tool call] name {json}" prose style
+        out = out.replace(Regex("\\[Tool call\\]\\s*\\w+\\s*\\{[^}]*\\}"), " ")
+        out = out.replace(Regex("\\s{2,}"), " ").trim()
+        return out
     }
 
     // ---------- native <|tool_call_start|> format ----------
