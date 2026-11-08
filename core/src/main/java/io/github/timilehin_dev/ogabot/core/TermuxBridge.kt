@@ -2,6 +2,7 @@ package io.github.timilehin_dev.ogabot.core
 
 import android.content.Context
 import kotlinx.serialization.json.JsonPrimitive
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 
 /**
  * Termux deep-access bridge client (the "shared computer" layer).
@@ -43,7 +44,7 @@ class TermuxBridge(private val context: Context) {
         return try {
             val payload = "{\"cmd\": " + JsonPrimitive(command).toString() + "}"
             val body = okhttp3.RequestBody.create(
-                okhttp3.MediaType.parse("application/json"), payload)
+                "application/json".toMediaTypeOrNull(), payload)
             val req = okhttp3.Request.Builder().url("$base/run")
                 .header("X-Key", key())
                 .post(body).build()
