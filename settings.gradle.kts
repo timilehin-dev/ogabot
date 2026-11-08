@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "Ogabot"
-include(":app", ":engine", ":bots", ":tools", ":core")
+include(":app", ":domain", ":agent", ":platform", ":tools", ":data")

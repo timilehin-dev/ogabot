@@ -1,5 +1,3 @@
-import java.lang.System
-
 plugins {
     id("com.android.application")
     kotlin("android")
@@ -29,11 +27,9 @@ android {
         applicationId = "io.github.timilehin_dev.ogabot"
         minSdk = 26
         targetSdk = 34
-        versionCode = 7
-        versionName = "0.4.0-beta1"
-        ndk {
-            abiFilters += listOf("arm64-v8a")
-        }
+        versionCode = 1
+        versionName = "0.5.0"
+        ndk { abiFilters += listOf("arm64-v8a") }
     }
 
     signingConfigs {
@@ -69,13 +65,20 @@ android {
 }
 
 dependencies {
-    implementation(project(":core"))
+    implementation(project(":domain"))
+    implementation(project(":agent"))
+    implementation(project(":platform"))
+    implementation(project(":tools"))
+    implementation(project(":data"))
+
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    implementation("androidx.navigation:navigation-compose:2.8.5")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("androidx.work:work-runtime-ktx:2.9.1")

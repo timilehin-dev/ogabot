@@ -16,17 +16,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import io.github.timilehin_dev.ogabot.R
 
-// Dark palette informed by Zafiro's Liquid Design System (Material3 fallback tier)
+// ---------------------------------------------------------------------------
+// Design tokens — see docs/APP_DESIGN.md §9 and §12
+// ---------------------------------------------------------------------------
+
 val Bg = Color(0xFF16151A)
 val SurfaceLow = Color(0xFF1D1C22)
 val SurfaceHigh = Color(0xFF2F2D32)
 val OnSurface = Color(0xFFE6E1E5)
 val OnSurfaceDim = Color(0xFF9A959F)
 val Accent = Color(0xFF9BA8FF)
+val Success = Color(0xFF9FE0C8)
+val Warning = Color(0xFFFFC940)
+val Danger = Color(0xFFFF7A7A)
 val CodeBg = Color(0xFF111014)
 val CodeFg = Color(0xFF9FE0C8)
-val Danger = Color(0xFFFF7A7A)
 
+/** Six gradient families — a Bot's avatar is recognizable at a glance. */
 val BotGradients: List<List<Color>> = listOf(
     listOf(Color(0xFF6C7BFF), Color(0xFF9B6CFF)),
     listOf(Color(0xFF00C2A8), Color(0xFF0091FF)),
@@ -36,9 +42,11 @@ val BotGradients: List<List<Color>> = listOf(
     listOf(Color(0xFFB57BFF), Color(0xFFFF6FD8))
 )
 
-fun avatarBrushFor(index: Int): Brush = Brush.linearGradient(BotGradients[index % BotGradients.size])
+fun avatarBrushFor(index: Int): Brush =
+    Brush.linearGradient(BotGradients[index % BotGradients.size])
 
-val AvatarBrush = Brush.linearGradient(listOf(Color(0xFF6C7BFF), Color(0xFF9B6CFF)))
+val AvatarBrush: Brush =
+    Brush.linearGradient(listOf(Color(0xFF6C7BFF), Color(0xFF9B6CFF)))
 
 private val OgabotColors = darkColorScheme(
     primary = Accent,
@@ -50,7 +58,11 @@ private val OgabotColors = darkColorScheme(
     surfaceVariant = SurfaceLow,
     onSurfaceVariant = OnSurfaceDim,
     outline = SurfaceHigh,
-    error = Danger
+    error = Danger,
+    secondary = Accent,
+    onSecondary = Color(0xFF10131F),
+    tertiary = Success,
+    onTertiary = Color(0xFF10131F)
 )
 
 private fun inter(weight: FontWeight, axis: Int) = Font(

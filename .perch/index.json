@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "perch-folder-index-v1",
+  "generatedAt": "2026-11-08T07:20:07.329Z",
+  "rootId": "root_1794122398995_08eju1",
+  "rootPath": "C:\\Users\\HP\\Downloads\\ogabot",
+  "counts": {
+    "totalFiles": 2,
+    "registeredSources": 2,
+    "indexedFiles": 2,
+    "skippedFiles": 0,
+    "failedFiles": 0,
+    "staleFiles": 0,
+    "sourceChunkCount": 2,
+    "sourceChunkFiles": 2,
+    "retrievalChunkCount": 2,
+    "retrievalReadyFiles": 2,
+    "embeddedChunkCount": 0,
+    "vectorReadyFiles": 0,
+    "filesNeedingOcr": 0
+  },
+  "status": "ready",
+  "storageMode": "desktop_local_files_workspace_cloud_index",
+  "localOnlyEmbeddingsEnabled": false,
+  "remoteIndexArtifacts": [
+    "source metadata",
+    "retrieval chunks",
+    "embeddings"
+  ],
+  "lastIndexedAt": "2026-11-08T07:20:07.329Z",
+  "diagnostics": [
+    "Indexed 2/2 file(s) for retrieval.",
+    "2 text/source chunk(s) available for keyword search.",
+    "2 retrieval chunk(s) available.",
+    "Keyword/source search is available; semantic/vector retrieval is pending."
+  ],
+  "files": [
+    {
+      "relativePath": ".perch\\mcp.json",
+      "fileName": "mcp.json",
+      "modifiedAt": "2026-11-08T07:19:59.007Z",
+      "status": "indexed",
+      "retrievalReady": true,
+      "vectorReady": false,
+      "sourceChunkCount": 1,
+      "retrievalChunkCount": 1,
+      "embeddedChunkCount": 0,
+      "supabaseSourceId": "aa4e8fc0-3efd-4e11-ab37-72242b2439e3",
+      "contentHash": "15be4c765713ed097a916388e9d8fce0e92f4f4c37d591581bf8d5e7c9698de4"
+    },
+    {
+      "relativePath": ".perch\\PERCH.md",
+      "fileName": "PERCH.md",
+      "modifiedAt": "2026-11-08T07:19:59.007Z",
+      "status": "indexed",
+      "retrievalReady": true,
+      "vectorReady": false,
+      "sourceChunkCount": 1,
+      "retrievalChunkCount": 1,
+      "embeddedChunkCount": 0,
+      "supabaseSourceId": "7bf7e4c6-3964-48c3-9572-c8c0c5c197fd",
+      "contentHash": "34d8b8f14b75a7b54f48f126880d8ee4aac62b90a2632cb186bf4f78230b35f3"
+    }
+  ]
+}
