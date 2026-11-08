@@ -2,7 +2,7 @@ package io.github.timilehin_dev.ogabot.agent
 
 import io.github.timilehin_dev.ogabot.domain.entity.AuditEntry
 import io.github.timilehin_dev.ogabot.domain.entity.Message
-import io.github.timilehin_dev.ogabot.domain.entity.StreamEvent
+import io.github.timilehin_dev.ogabot.domain.entity.ToolCall
 import io.github.timilehin_dev.ogabot.domain.entity.ToolResult
 import io.github.timilehin_dev.ogabot.domain.entity.TurnEvent
 import io.github.timilehin_dev.ogabot.domain.entity.TurnOutcome
@@ -10,6 +10,7 @@ import io.github.timilehin_dev.ogabot.domain.port.ApprovalGate
 import io.github.timilehin_dev.ogabot.domain.port.ApprovalResponder
 import io.github.timilehin_dev.ogabot.domain.port.ApprovalResponse
 import io.github.timilehin_dev.ogabot.domain.port.AuditSink
+import io.github.timilehin_dev.ogabot.domain.port.StreamEvent
 import io.github.timilehin_dev.ogabot.domain.port.ToolProvider
 import io.github.timilehin_dev.ogabot.domain.port.TurnEngine
 import io.github.timilehin_dev.ogabot.domain.port.TurnRequest
@@ -43,13 +44,13 @@ class AgentTurnEngine(
         var history = request.history
 
         for (iteration in 0 until maxIterations) {
-            val calls = mutableListOf<io.github.timilehin_dev.ogabot.domain.entity.ToolCall>()
+            val calls = mutableListOf<ToolCall>()
             var streamError: String? = null
 
             model.stream(history, descriptors).collect { ev ->
                 when (ev) {
                     is StreamEvent.Delta -> emit(TurnEvent.Delta(ev.text))
-                    is StreamEvent.ToolCall -> calls += ev.call
+                    is StreamEvent.ToolCallEvent -> calls.add(ev.call)
                     is StreamEvent.Error -> streamError = ev.message
                     StreamEvent.Done -> {}
                 }

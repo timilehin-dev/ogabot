@@ -2,9 +2,9 @@ package io.github.timilehin_dev.ogabot.agent
 
 import io.github.timilehin_dev.ogabot.domain.entity.Message
 import io.github.timilehin_dev.ogabot.domain.entity.ProviderConfig
-import io.github.timilehin_dev.ogabot.domain.entity.StreamEvent
 import io.github.timilehin_dev.ogabot.domain.entity.ToolDescriptor
 import io.github.timilehin_dev.ogabot.domain.port.ModelProvider
+import io.github.timilehin_dev.ogabot.domain.port.StreamEvent
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -43,7 +43,7 @@ class OpenAiModelProvider(private val config: ProviderConfig) : ModelProvider {
     override fun stream(
         messages: List<Message>,
         tools: List<ToolDescriptor>
-    ): Flow<StreamEvent> = callbackFlow {
+    ): Flow<StreamEvent> = callbackFlow<StreamEvent> {
         val body = buildRequest(messages, tools)
         val request = Request.Builder()
             .url(config.endpoint.trimEnd('/') + "/chat/completions")
@@ -57,7 +57,7 @@ class OpenAiModelProvider(private val config: ProviderConfig) : ModelProvider {
         val listener = object : EventSourceListener() {
             override fun onEvent(eventSource: EventSource, id: String?, type: String?, data: String) {
                 if (data.trim() == "[DONE]") {
-                    accumulator.flush().forEach { trySend(StreamEvent.ToolCall(it)) }
+                    accumulator.flush().forEach { trySend(StreamEvent.ToolCallEvent(it)) }
                     trySend(StreamEvent.Done)
                     close()
                     return
@@ -70,7 +70,7 @@ class OpenAiModelProvider(private val config: ProviderConfig) : ModelProvider {
                     // Some providers send the complete call in `message` on a final chunk.
                     choice.message?.toolCalls?.forEach { accumulator.accept(it) }
                     if (choice.finishReason == "tool_calls" || choice.finishReason == "function_call") {
-                        accumulator.flush().forEach { trySend(StreamEvent.ToolCall(it)) }
+                        accumulator.flush().forEach { trySend(StreamEvent.ToolCallEvent(it)) }
                         trySend(StreamEvent.Done)
                         close()
                     }
@@ -97,7 +97,7 @@ class OpenAiModelProvider(private val config: ProviderConfig) : ModelProvider {
             }
 
             override fun onClosed(eventSource: EventSource) {
-                accumulator.flush().forEach { trySend(StreamEvent.ToolCall(it)) }
+                accumulator.flush().forEach { trySend(StreamEvent.ToolCallEvent(it)) }
                 trySend(StreamEvent.Done)
                 close()
             }

@@ -78,7 +78,7 @@ interface ModelProvider {
 
 sealed class StreamEvent {
     data class Delta(val text: String) : StreamEvent()
-    data class ToolCall(val call: ToolCall) : StreamEvent()
+    data class ToolCallEvent(val call: ToolCall) : StreamEvent()
     data class Error(val message: String) : StreamEvent()
     object Done : StreamEvent()
 }
