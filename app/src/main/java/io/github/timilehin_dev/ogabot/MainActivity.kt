@@ -30,6 +30,7 @@ import io.github.timilehin_dev.ogabot.core.Routine
 import io.github.timilehin_dev.ogabot.core.RoutineStore
 import io.github.timilehin_dev.ogabot.core.ProviderConfig
 import io.github.timilehin_dev.ogabot.core.StreamEvent
+import io.github.timilehin_dev.ogabot.core.ToolCallParser
 import io.github.timilehin_dev.ogabot.core.VaultStore
 import io.github.timilehin_dev.ogabot.ui.AuditScreen
 import io.github.timilehin_dev.ogabot.ui.BotSettingsScreen
@@ -286,8 +287,9 @@ class OgabotViewModel(app: Application) : AndroidViewModel(app) {
             else ""
             val system = bot.systemPrompt +
                 memory.promptInjection(bot.id) +
-                "\n\n[Tools you may call — reply with ONLY a JSON array to call tools]\n" +
-                "[{\"call\": \"tool_name\", \"args\": {…}}, …] — or answer normally in plain text.\n" +
+                "\n\n[Tools you may call]\n" +
+                "To call tools, reply with EITHER a JSON array [{\"call\": \"tool_name\", \"args\": {…}}] " +
+                "OR use your native tool-call syntax. Or answer normally in plain text.\n" +
                 toolLines +
                 "\nRules: NEVER claim a tool ran unless you saw its result. " +
                 "propose_bot only DRAFTS a bot; the human approves creation. " +
@@ -316,16 +318,15 @@ class OgabotViewModel(app: Application) : AndroidViewModel(app) {
             assistantText = streamingText
             streamingText = ""
 
-            val calls = parseToolCalls(assistantText)
-            if (calls.isNotEmpty()) {
-                // strip the JSON span from the reply; commit surrounding prose as a real message
-                val prose = stripJsonArray(assistantText).trim()
+            val parsed = ToolCallParser.parse(assistantText)
+            if (parsed.calls.isNotEmpty()) {
+                val prose = parsed.prose
                 if (prose.isNotBlank()) {
                     messages = messages + ChatMessage("assistant", prose)
                     store.save(bot.id, messages)
                 }
                 isStreaming = false
-                executeToolCalls(bot.id, calls)
+                executeToolCalls(bot.id, parsed.calls)
                 return@launch
             }
 
@@ -336,61 +337,6 @@ class OgabotViewModel(app: Application) : AndroidViewModel(app) {
             isStreaming = false
             error = gotError
         }
-    }
-
-    private fun parseToolCalls(text: String): List<ToolCallRequest> {
-        // Find the first top-level JSON array anywhere in the text (models wrap it in prose/fences).
-        val cleaned = text.replace("```json", "```").replace("```", "\n")
-        val start = cleaned.indexOf('[')
-        if (start < 0) return emptyList()
-        var depth = 0
-        var end = -1
-        var inString = false
-        var escape = false
-        for (i in start until cleaned.length) {
-            val c = cleaned[i]
-            if (escape) { escape = false; continue }
-            when {
-                c == '\\' && inString -> escape = true
-                c == '"' -> inString = !inString
-                !inString && c == '[' -> depth++
-                !inString && c == ']' -> { depth--; if (depth == 0) { end = i; break } }
-            }
-        }
-        if (end < 0) return emptyList()
-        val candidate = cleaned.substring(start, end + 1)
-        return try {
-            val arr = Json.parseToJsonElement(candidate) as? JsonArray ?: return emptyList()
-            arr.mapNotNull { el ->
-                val obj = el as? JsonObject ?: return@mapNotNull null
-                val name = obj["call"]?.toString()?.trim('"') ?: return@mapNotNull null
-                val args = obj["args"]?.toString() ?: "{}"
-                ToolCallRequest(
-                    callId = "c" + System.currentTimeMillis().toString(36),
-                    tool = name.trim(),
-                    argsJson = args
-                )
-            }
-        } catch (e: Exception) { emptyList() }
-    }
-
-    private fun stripJsonArray(text: String): String {
-        val cleaned = text.replace("```json", "```").replace("```", "\n")
-        val start = cleaned.indexOf('[')
-        if (start < 0) return text
-        var depth = 0; var end = -1; var inString = false; var escape = false
-        for (i in start until cleaned.length) {
-            val c = cleaned[i]
-            if (escape) { escape = false; continue }
-            when {
-                c == '\\' && inString -> escape = true
-                c == '"' -> inString = !inString
-                !inString && c == '[' -> depth++
-                !inString && c == ']' -> { depth--; if (depth == 0) { end = i; break } }
-            }
-        }
-        if (end < 0) return text
-        return (cleaned.substring(0, start) + " " + cleaned.substring(end + 1)).trim()
     }
 
     private fun executeToolCalls(botId: String, calls: List<ToolCallRequest>) {
