@@ -32,8 +32,10 @@ object ToolCallParser {
 
     /** Microsoft dots/ Semantic-Kernel style:
      *  <dots_function_call><invoke name="tool">{"k": "v"}</invoke></dots_function_call> */
+    private val DQS: String = 34.toChar().toString()
+
     private val dotsRegex = Regex(
-        "<dots_function_call>\\s*<invoke\\s+name=\\"([^\\"]+)\\">\\s*([\\s\\S]*?)\\s*</invoke>\\s*</dots_function_call>"
+        "<dots_function_call>\\s*<invoke\\s+name=" + DQS + "([^" + DQS + "]+)" + DQS + ">\\s*([\\s\\S]*?)\\s*</invoke>\\s*</dots_function_call>"
     )
 
     fun parseDots(text: String): Parsed? {
@@ -56,7 +58,7 @@ object ToolCallParser {
 
     /** Also tolerate <invoke name=...> without the wrapper. */
     private val invokeRegex = Regex(
-        "<invoke\\s+name=\\"([^\\"]+)\\">\\s*([\\s\\S]*?)\\s*</invoke>"
+        "<invoke\\s+name=" + DQS + "([^" + DQS + "]+)" + DQS + ">\\s*([\\s\\S]*?)\\s*</invoke>"
     )
 
     /** Guarantee: raw tool-call syntax NEVER reaches the chat UI. */
