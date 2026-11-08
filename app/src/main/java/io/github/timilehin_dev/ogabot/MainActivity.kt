@@ -308,9 +308,11 @@ class OgabotViewModel(app: Application) : AndroidViewModel(app) {
 
             var gotError: String? = null
             var assistantText = ""
-            OpenAiClient(cfg).streamChat(history).collect { ev ->
+            val fcCalls = mutableListOf<ToolCallRequest>()
+            OpenAiClient(cfg).streamChat(history, builtinTools.descriptors).collect { ev ->
                 when (ev) {
                     is StreamEvent.Delta -> streamingText = streamingText + ev.text
+                    is StreamEvent.ToolCallEvt -> fcCalls += ToolCallRequest(ev.callId, ev.name, ev.argsJson)
                     is StreamEvent.Error -> gotError = ev.message
                     StreamEvent.Done -> {}
                 }
@@ -318,6 +320,19 @@ class OgabotViewModel(app: Application) : AndroidViewModel(app) {
             assistantText = streamingText
             streamingText = ""
 
+            // PRIMARY: structured function calling (works with ANY OpenAI-compatible provider)
+            if (fcCalls.isNotEmpty()) {
+                val prose = assistantText.trim()
+                if (prose.isNotBlank()) {
+                    messages = messages + ChatMessage("assistant", prose)
+                    store.save(bot.id, messages)
+                }
+                isStreaming = false
+                executeToolCalls(bot.id, fcCalls)
+                return@launch
+            }
+
+            // FALLBACK: text-embedded calls (providers without FC support)
             val parsed = ToolCallParser.parse(assistantText)
             if (parsed.calls.isNotEmpty()) {
                 val prose = parsed.prose
