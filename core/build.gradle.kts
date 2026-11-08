@@ -14,6 +14,9 @@ android {
     compileSdk = 35
     defaultConfig {
         minSdk = 26
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
