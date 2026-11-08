@@ -6,6 +6,25 @@
 
 ---
 
+## 0. The clean-slate decision
+
+**This is a rebuild, not a migration.** Everything built before is removed:
+
+- All existing Kotlin source (`:app`, `:core`, `:engine`, `:bots`, `:tools`) is deleted.
+- **okia is removed entirely** — no protocol inheritance, no extraction. We write our own protocol layer and our own loop.
+- **Koog is not used.** We own the turn engine end to end.
+- We build our own everything: loop, protocol, tools, memory, skills, scheduler, UI.
+
+**Kept:** the docs (research, architecture, app design), the CI workflow, the Gradle project structure, the signing configuration, and the lessons learned.
+
+**New module layout:** `:domain`, `:agent`, `:platform`, `:tools`, `:data`, `:app`.
+
+The old build stays in git history. Read it; do not build on it.
+
+**The app design** (screens, flows, information architecture, navigation, design system) is specified separately in `APP_DESIGN.md`, derived from Grok Bot's design language.
+
+---
+
 ## 1. Thesis
 
 Ogabot is a phone that works for you while you are not looking.
@@ -168,10 +187,17 @@ Compose, one ViewModel per screen, Navigation-Compose with typed routes.
 
 ### What gets deleted
 
-- `:engine` (7,325 lines, zero references) — replaced by our own loop. **Licence note:** okia is MIT by niki914 and the module carries no copyright notice. Either add `engine/LICENSE` with the upstream MIT text before removal, or delete the module outright — which resolves it. Add `THIRD_PARTY_NOTICES.md` at the repo root either way.
-- `:bots`, `:tools` (empty shells) — folded into `:agent` and `:tools`.
-- `MainActivity`'s `runTurn` / `executeToolCalls` / recursive re-entry — moves to `:agent`.
+**Everything.** The old build is removed in full — this is a clean-slate rebuild (§0):
+
+- `:app`, `:core`, `:engine`, `:bots`, `:tools` — all Kotlin source deleted.
+- `:engine` (okia, 7,325 lines) — deleted outright. No protocol extraction. We write our own protocol layer.
+- `MainActivity`'s `runTurn` / `executeToolCalls` / recursive re-entry — replaced by `:agent`.
 - The `Screen` enum + `push`/`back` stack — replaced by Navigation-Compose.
+- The old UI (Home, Chat, Wizard, Settings, Memory, Routines, Audit, BotSettings) — replaced by the app design in `APP_DESIGN.md`.
+
+**Kept:** docs, CI workflow, Gradle project structure, signing config, `gradle.properties` (with `-Xmx` tuned for 8 GB RAM).
+
+**Licence note:** okia is MIT by niki914. Deleting the module outright resolves the missing-notice issue. Add `THIRD_PARTY_NOTICES.md` at the repo root for any future dependencies.
 
 ---
 
@@ -554,52 +580,19 @@ This is where most Android agent apps die. The constraints are walls, not prefer
 
 ---
 
-## 16. UI — Today-first
+## 16. UI — Bots-first, needs-you always visible
 
-The home screen answers **"what do I need to know and what do I need to decide."** Not "who do I want to talk to."
+**The full app design — information architecture, screen inventory, navigation, flows, presence, cards, and design tokens — is in `APP_DESIGN.md`.** It is derived from Grok Bot's design language and adapted to Android.
 
-Three surfaces, bottom navigation:
+The short version:
 
-```
-┌─────────────────────────────────────────┐
-│  Today                                  │
-│                                         │
-│  ⚠ 2 waiting on you                     │  <- approvals first, always
-│  ┌───────────────────────────────────┐  │
-│  │ Inbox Triage wants to send 3      │  │
-│  │ emails.  [Review]                 │  │
-│  └───────────────────────────────────┘  │
-│                                         │
-│  Ran while you were away                │
-│  ┌───────────────────────────────────┐  │
-│  │ ● Morning Brief      08:00  ✓     │  │
-│  │   "3 things today: ..."  [open]   │  │
-│  ├───────────────────────────────────┤  │
-│  │ ● Invoice Watch      07:15  ✓     │  │
-│  │   2 new invoices, 1 flagged       │  │
-│  ├───────────────────────────────────┤  │
-│  │ ○ Research Bot       06:00  ⚠     │  │
-│  │   Failed: provider 429            │  │
-│  └───────────────────────────────────┘  │
-│                                         │
-│  Up next                                │
-│  Research Bot · 14:00 · daily digest    │
-│                                         │
-├─────────────────────────────────────────┤
-│   Today      Bots      Activity    ⚙    │
-└─────────────────────────────────────────┘
-```
+- **The home screen is the Bot roster** (GrokBot's primary object), with a **"Needs you" section at the top**: approvals, drafts, failed routines, `@user` escalations, staged memory writes. That section *is* the triage surface — no separate "Today" tab.
+- **Presence is interface:** each Bot's avatar and title show idle / working / waiting / needs help, so the roster answers "what do I need to know" without opening a chat.
+- **Bottom navigation, three destinations:** **Bots** (home), **Activity** (audit log + run history), **Settings** (providers, connectors, permissions, Termux, about).
+- **Bot detail** is a pushed screen with tabs: **Chat / Routines / Memory / Workspace / Settings**.
+- **The completeness rule:** every state blocked on a human surfaces on the home screen. If a Bot is waiting on you and home does not say so, that is a bug.
 
-**The completeness rule for Today:** every state in the app that is blocked on a human must surface there. Approvals waiting (with expiry countdown), drafts awaiting send, routines that failed, `@user` escalations, and staged memory writes. If a bot is waiting on you and Today does not say so, that is a bug, not a missing feature.
-
-### Navigation
-
-Four destinations, no drawer, no nested tabs:
-
-- **Today** — approvals, recent runs, next up. The default screen.
-- **Bots** — the roster. Tap a bot for its detail.
-- **Activity** — the full audit log and run history, filterable by bot, tool, outcome.
-- **Settings** — providers, keys, budgets, permissions, memory, Termux, about.
+The design tokens (colors, radii, typography, avatar gradients) are in `APP_DESIGN.md` §9 and §12.
 
 ### Bot detail
 
