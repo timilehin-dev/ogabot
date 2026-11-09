@@ -19,7 +19,7 @@ data class TurnRequest(
     val background: Boolean = false
 )
 
-interface ToolExecutor {
+fun interface ToolExecutor {
     suspend fun execute(call: ToolCall): ToolResult
 }
 
@@ -90,11 +90,11 @@ interface CapabilityRegistry {
 
 interface TermuxBackend {
     val state: TermuxState
-    fun exec(command: String, timeoutSec: Int = 120): ExecResult
-    fun readFile(path: String): String?
-    fun writeFile(path: String, content: String): Boolean
-    fun startDaemon(name: String, command: String): Boolean
-    fun stopDaemon(name: String): Boolean
+    suspend fun exec(command: String, timeoutSec: Int = 120): ExecResult
+    suspend fun readFile(path: String): String?
+    suspend fun writeFile(path: String, content: String): Boolean
+    suspend fun startDaemon(name: String, command: String): Boolean
+    suspend fun stopDaemon(name: String): Boolean
 }
 
 enum class TermuxState { NOT_INSTALLED, INSTALLED, BOOTSTRAPPED, RUNNING }
@@ -110,7 +110,7 @@ interface Vault {
  * Suspends the turn until the human answers an approval request. The ViewModel
  * shows the card and resumes this when the user taps Allow once / Always / Deny.
  */
-interface ApprovalResponder {
+fun interface ApprovalResponder {
     suspend fun request(request: ApprovalRequest): ApprovalResponse
 }
 

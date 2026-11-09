@@ -18,6 +18,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import io.github.timilehin_dev.ogabot.AppGraph
 
 /** Typed routes — see docs/APP_DESIGN.md §4. */
 object Routes {
@@ -27,7 +28,7 @@ object Routes {
 }
 
 @Composable
-fun AppRoot() {
+fun AppRoot(graph: AppGraph) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
@@ -77,9 +78,9 @@ fun AppRoot() {
             startDestination = Routes.BOTS,
             modifier = Modifier.padding(padding)
         ) {
-            composable(Routes.BOTS) { BotsScreen() }
-            composable(Routes.ACTIVITY) { ActivityScreen() }
-            composable(Routes.SETTINGS) { SettingsScreen() }
+            composable(Routes.BOTS) { BotsScreen(graph) }
+            composable(Routes.ACTIVITY) { ActivityScreen(graph) }
+            composable(Routes.SETTINGS) { SettingsScreen(graph) }
         }
     }
 }

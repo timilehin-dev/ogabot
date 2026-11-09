@@ -10,23 +10,36 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import io.github.timilehin_dev.ogabot.AppGraph
 
 /**
- * Placeholder screens for the Sprint 0 skeleton. Each is replaced by the real
- * implementation in its own sprint — see docs/APP_DESIGN.md §5.
+ * Activity — the audit log. Every tool call, on record.
+ * (BotsScreen is the home surface; see BotsScreen.kt.)
  */
 @Composable
-fun BotsScreen() {
-    CenteredLabel("Bots", "Your teammates live here.")
+fun ActivityScreen(graph: AppGraph) {
+    val entries = graph.audit.recent(20)
+    if (entries.isEmpty()) {
+        CenteredLabel("Activity", "Every action, on record.")
+    } else {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text("Activity", style = MaterialTheme.typography.headlineSmall)
+            entries.forEach { e ->
+                Text(
+                    "${e.tool} · ${if (e.ok) "OK" else "FAIL"} · ${e.tier}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
 }
 
 @Composable
-fun ActivityScreen() {
-    CenteredLabel("Activity", "Every action, on record.")
-}
-
-@Composable
-fun SettingsScreen() {
+fun SettingsScreen(graph: AppGraph) {
     CenteredLabel("Settings", "Providers, connectors, permissions.")
 }
 

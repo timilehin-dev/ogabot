@@ -9,9 +9,10 @@ import io.github.timilehin_dev.ogabot.ui.OgabotTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val graph = (application as OgabotApplication).graph
         setContent {
             OgabotTheme {
-                AppRoot()
+                AppRoot(graph)
             }
         }
     }
