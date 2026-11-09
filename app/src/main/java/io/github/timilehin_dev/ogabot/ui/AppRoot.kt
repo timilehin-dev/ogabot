@@ -14,10 +14,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import io.github.timilehin_dev.ogabot.AppGraph
 
 /** Typed routes — see docs/APP_DESIGN.md §4. */
@@ -25,6 +27,8 @@ object Routes {
     const val BOTS = "bots"
     const val ACTIVITY = "activity"
     const val SETTINGS = "settings"
+    const val CHAT = "chat/{botId}"
+    fun chat(botId: String) = "chat/$botId"
 }
 
 @Composable
@@ -32,44 +36,47 @@ fun AppRoot(graph: AppGraph) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
+    val onChat = currentDestination?.hierarchy?.any { it.route == Routes.CHAT } == true
 
     Scaffold(
         containerColor = Bg,
         bottomBar = {
-            NavigationBar(containerColor = SurfaceLow) {
-                NavigationBarItem(
-                    icon = { Icon(Icons.Filled.SmartToy, contentDescription = "Bots") },
-                    label = { Text("Bots") },
-                    selected = currentDestination?.hierarchy?.any { it.route == Routes.BOTS } == true,
-                    onClick = {
-                        navController.navigate(Routes.BOTS) {
-                            launchSingleTop = true
-                            popUpTo(Routes.BOTS) { inclusive = true }
+            if (!onChat) {
+                NavigationBar(containerColor = SurfaceLow) {
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Filled.SmartToy, contentDescription = "Bots") },
+                        label = { Text("Bots") },
+                        selected = currentDestination?.hierarchy?.any { it.route == Routes.BOTS } == true,
+                        onClick = {
+                            navController.navigate(Routes.BOTS) {
+                                launchSingleTop = true
+                                popUpTo(Routes.BOTS) { inclusive = true }
+                            }
                         }
-                    }
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Filled.Notifications, contentDescription = "Activity") },
-                    label = { Text("Activity") },
-                    selected = currentDestination?.hierarchy?.any { it.route == Routes.ACTIVITY } == true,
-                    onClick = {
-                        navController.navigate(Routes.ACTIVITY) {
-                            launchSingleTop = true
-                            popUpTo(Routes.BOTS)
+                    )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Filled.Notifications, contentDescription = "Activity") },
+                        label = { Text("Activity") },
+                        selected = currentDestination?.hierarchy?.any { it.route == Routes.ACTIVITY } == true,
+                        onClick = {
+                            navController.navigate(Routes.ACTIVITY) {
+                                launchSingleTop = true
+                                popUpTo(Routes.BOTS)
+                            }
                         }
-                    }
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Filled.Settings, contentDescription = "Settings") },
-                    label = { Text("Settings") },
-                    selected = currentDestination?.hierarchy?.any { it.route == Routes.SETTINGS } == true,
-                    onClick = {
-                        navController.navigate(Routes.SETTINGS) {
-                            launchSingleTop = true
-                            popUpTo(Routes.BOTS)
+                    )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Filled.Settings, contentDescription = "Settings") },
+                        label = { Text("Settings") },
+                        selected = currentDestination?.hierarchy?.any { it.route == Routes.SETTINGS } == true,
+                        onClick = {
+                            navController.navigate(Routes.SETTINGS) {
+                                launchSingleTop = true
+                                popUpTo(Routes.BOTS)
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
         }
     ) { padding ->
@@ -78,9 +85,18 @@ fun AppRoot(graph: AppGraph) {
             startDestination = Routes.BOTS,
             modifier = Modifier.padding(padding)
         ) {
-            composable(Routes.BOTS) { BotsScreen(graph) }
+            composable(Routes.BOTS) {
+                BotsScreen(graph) { botId -> navController.navigate(Routes.chat(botId)) }
+            }
             composable(Routes.ACTIVITY) { ActivityScreen(graph) }
             composable(Routes.SETTINGS) { SettingsScreen(graph) }
+            composable(
+                Routes.CHAT,
+                arguments = listOf(navArgument("botId") { type = NavType.StringType })
+            ) { entry ->
+                val botId = entry.arguments?.getString("botId").orEmpty()
+                ChatScreen(graph, botId) { navController.popBackStack() }
+            }
         }
     }
 }

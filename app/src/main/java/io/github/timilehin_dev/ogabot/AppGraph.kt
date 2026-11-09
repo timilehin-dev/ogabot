@@ -3,8 +3,10 @@ package io.github.timilehin_dev.ogabot
 import android.content.Context
 import io.github.timilehin_dev.ogabot.agent.AgentTurnEngine
 import io.github.timilehin_dev.ogabot.agent.ApprovalGateImpl
+import io.github.timilehin_dev.ogabot.agent.OpenAiModelProvider
 import io.github.timilehin_dev.ogabot.data.AuditFileStore
 import io.github.timilehin_dev.ogabot.data.BotFileStore
+import io.github.timilehin_dev.ogabot.data.ChatFileStore
 import io.github.timilehin_dev.ogabot.data.MemoryFileStore
 import io.github.timilehin_dev.ogabot.data.RoutineFileStore
 import io.github.timilehin_dev.ogabot.data.VaultStore
@@ -14,6 +16,7 @@ import io.github.timilehin_dev.ogabot.domain.port.ApprovalResponder
 import io.github.timilehin_dev.ogabot.domain.port.ApprovalResponse
 import io.github.timilehin_dev.ogabot.domain.port.AuditSink
 import io.github.timilehin_dev.ogabot.domain.port.BotRegistry
+import io.github.timilehin_dev.ogabot.domain.port.ChatStore
 import io.github.timilehin_dev.ogabot.domain.port.MemoryStore
 import io.github.timilehin_dev.ogabot.domain.port.ModelProvider
 import io.github.timilehin_dev.ogabot.domain.port.Scheduler
@@ -25,7 +28,6 @@ import io.github.timilehin_dev.ogabot.platform.RoutineScheduler
 import io.github.timilehin_dev.ogabot.platform.ServiceLocator
 import io.github.timilehin_dev.ogabot.platform.TermuxBridge
 import io.github.timilehin_dev.ogabot.tools.BuiltinTools
-import io.github.timilehin_dev.ogabot.agent.OpenAiModelProvider
 import java.io.File
 
 /**
@@ -39,6 +41,7 @@ class AppGraph(context: Context) {
     val audit: AuditSink = AuditFileStore(context)
     val vault: Vault = VaultStore(context)
     val routines: RoutineFileStore = RoutineFileStore(context)
+    val chatStore: ChatStore = ChatFileStore(context)
     val scheduler: Scheduler = RoutineScheduler(context)
     val termux: TermuxBackend = TermuxBridge(context)
     val builtinTools: ToolProvider = BuiltinTools(context, bots, memory)
@@ -52,11 +55,13 @@ class AppGraph(context: Context) {
         OpenAiModelProvider(cfg)
     }
 
-    val engine: TurnEngine by lazy {
-        AgentTurnEngine(model, gate, approvalResponder, listOf(builtinTools), audit)
-    }
-
     val allTools: List<ToolProvider> get() = listOf(builtinTools)
+
+    /** A turn engine bound to a specific approval responder — one per chat. */
+    fun newEngine(responder: ApprovalResponder): TurnEngine =
+        AgentTurnEngine(model, gate, responder, allTools, audit)
+
+    val engine: TurnEngine by lazy { newEngine(approvalResponder) }
 
     fun init() {
         ServiceLocator.turnEngine = engine

@@ -115,3 +115,10 @@ fun interface ApprovalResponder {
 }
 
 enum class ApprovalResponse { ALLOW_ONCE, ALLOW_ALWAYS, DENY }
+
+/** Per-bot conversation persistence: threads/<botId>.json. */
+interface ChatStore {
+    fun load(botId: String): List<Message>
+    fun save(botId: String, messages: List<Message>)
+    fun delete(botId: String)
+}

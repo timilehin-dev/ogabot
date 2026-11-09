@@ -130,7 +130,7 @@ enum class TurnOutcome { COMPLETED, FAILED, ABORTED, IDLE_TIMEOUT }
 
 sealed class TurnEvent {
     data class Delta(val text: String) : TurnEvent()
-    data class ToolCall(val call: ToolCall) : TurnEvent()
+    data class ToolCallEvent(val call: ToolCall) : TurnEvent()
     data class ToolResultValue(val result: ToolResult) : TurnEvent()
     data class NeedsApproval(val request: ApprovalRequest) : TurnEvent()
     data class Completed(val outcome: TurnOutcome) : TurnEvent()

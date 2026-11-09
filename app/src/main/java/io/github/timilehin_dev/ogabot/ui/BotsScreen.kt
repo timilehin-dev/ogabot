@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,13 +20,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -48,7 +52,7 @@ import io.github.timilehin_dev.ogabot.domain.entity.Bot
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BotsScreen(graph: AppGraph) {
+fun BotsScreen(graph: AppGraph, onOpenBot: (String) -> Unit) {
     var bots by remember { mutableStateOf(graph.bots.list()) }
     var showWizard by remember { mutableStateOf(false) }
 
@@ -87,13 +91,13 @@ fun BotsScreen(graph: AppGraph) {
     ) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 110.dp),
+            contentPadding = PaddingValues(bottom = 110.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             if (bots.isEmpty()) {
                 item { EmptyRoster() }
             } else {
-                items(bots, key = { it.id }) { bot -> BotRow(bot) }
+                items(bots, key = { it.id }) { bot -> BotRow(bot) { onOpenBot(bot.id) } }
             }
         }
     }
@@ -102,9 +106,10 @@ fun BotsScreen(graph: AppGraph) {
         NewBotDialog(
             onDismiss = { showWizard = false },
             onCreate = { name, persona, color ->
-                graph.bots.create(name, persona, color)
+                val bot = graph.bots.create(name, persona, color)
                 bots = graph.bots.list()
                 showWizard = false
+                onOpenBot(bot.id)
             }
         )
     }
@@ -133,11 +138,11 @@ private fun EmptyRoster() {
 }
 
 @Composable
-private fun BotRow(bot: Bot) {
+private fun BotRow(bot: Bot, onOpen: () -> Unit) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant,
         shape = RoundedCornerShape(20.dp),
-        modifier = Modifier.fillMaxWidth().clickable { /* open chat — lands with the chat sprint */ }
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onOpen)
     ) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -155,15 +160,13 @@ private fun BotRow(bot: Bot) {
             Column(Modifier.weight(1f)) {
                 Text(bot.name, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    bot.persona.replace("\n", " ").take(72) + if (bot.persona.length > 72) "…" else "",
+                    bot.persona.replace("\n", " ").take(72) + if (bot.persona.length > 72) "\u2026" else "",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1
                 )
             }
-            Box(
-                Modifier.size(10.dp).background(Success, CircleShape)
-            )
+            Box(Modifier.size(10.dp).background(Success, CircleShape))
         }
     }
 }
@@ -174,20 +177,20 @@ private fun NewBotDialog(onDismiss: () -> Unit, onCreate: (String, String, Int) 
     var persona by remember { mutableStateOf("") }
     var colorIndex by remember { mutableStateOf(0) }
 
-    androidx.compose.material3.AlertDialog(
+    AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = SurfaceLow,
         title = { Text("New bot") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                androidx.compose.material3.OutlinedTextField(
+                OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("Name") },
                     singleLine = true,
                     shape = RoundedCornerShape(16.dp)
                 )
-                androidx.compose.material3.OutlinedTextField(
+                OutlinedTextField(
                     value = persona,
                     onValueChange = { persona = it },
                     label = { Text("Job description") },
@@ -206,13 +209,13 @@ private fun NewBotDialog(onDismiss: () -> Unit, onCreate: (String, String, Int) 
             }
         },
         confirmButton = {
-            androidx.compose.material3.TextButton(
+            TextButton(
                 onClick = { onCreate(name, persona, colorIndex) },
                 enabled = name.isNotBlank() && persona.isNotBlank()
             ) { Text("Create bot") }
         },
         dismissButton = {
-            androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
 }
