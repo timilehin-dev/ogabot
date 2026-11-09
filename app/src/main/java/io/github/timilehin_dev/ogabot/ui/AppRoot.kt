@@ -32,6 +32,8 @@ object Routes {
     const val SETTINGS = "settings"
     const val SETUP = "setup"
     const val CHAT = "chat/{botId}"
+    const val BOT = "bot/{botId}"
+    fun bot(botId: String) = "bot/$botId"
     fun chat(botId: String) = "chat/$botId"
 }
 
@@ -97,17 +99,17 @@ fun AppRoot(graph: AppGraph) {
             modifier = Modifier.padding(padding)
         ) {
             composable(Routes.BOTS) {
-                BotsScreen(graph) { botId -> navController.navigate(Routes.chat(botId)) }
+                BotsScreen(graph) { botId -> navController.navigate(Routes.bot(botId)) }
             }
             composable(Routes.ACTIVITY) { ActivityScreen(graph) }
             composable(Routes.SETTINGS) { SettingsScreen(graph) }
             composable(Routes.SETUP) { SetupScreen(graph, isOnboarding = false) { navController.popBackStack() } }
             composable(
-                Routes.CHAT,
+                Routes.BOT,
                 arguments = listOf(navArgument("botId") { type = NavType.StringType })
             ) { entry ->
                 val botId = entry.arguments?.getString("botId").orEmpty()
-                ChatScreen(graph, botId) { navController.popBackStack() }
+                BotDetailScreen(graph, botId) { navController.popBackStack() }
             }
         }
     }
