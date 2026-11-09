@@ -12,6 +12,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavType
@@ -27,12 +30,20 @@ object Routes {
     const val BOTS = "bots"
     const val ACTIVITY = "activity"
     const val SETTINGS = "settings"
+    const val SETUP = "setup"
     const val CHAT = "chat/{botId}"
     fun chat(botId: String) = "chat/$botId"
 }
 
 @Composable
 fun AppRoot(graph: AppGraph) {
+    var providerConfigured by remember { mutableStateOf(graph.vault.load() != null) }
+
+    if (!providerConfigured) {
+        SetupScreen(graph, isOnboarding = true) { providerConfigured = true }
+        return
+    }
+
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
@@ -90,6 +101,7 @@ fun AppRoot(graph: AppGraph) {
             }
             composable(Routes.ACTIVITY) { ActivityScreen(graph) }
             composable(Routes.SETTINGS) { SettingsScreen(graph) }
+            composable(Routes.SETUP) { SetupScreen(graph, isOnboarding = false) { navController.popBackStack() } }
             composable(
                 Routes.CHAT,
                 arguments = listOf(navArgument("botId") { type = NavType.StringType })
